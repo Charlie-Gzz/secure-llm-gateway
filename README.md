@@ -62,6 +62,8 @@ Every request goes through the guards in order, cheapest first. If a guard block
 
 Every response carries a `gateway` field and an `X-Gateway-Verdict` header. They contain the verdict, the deciding layer and reason, the scores, the redactions, latency per step, tokens, cost, and the trace ID. The playground draws its inspector from this field.
 
+**Streaming** (`"stream": true`) works with the same guards and the OpenAI SDK's `stream=True`. The input guards finish before the first byte is sent, so a blocked prompt still never reaches the model. Redacting the answer is the hard part: the model streams a few characters at a time, so an email address arrives in pieces, and redacting each chunk on its own would leak them. Bulwark holds the text back until a sentence boundary, redacts the whole sentence, and then releases it ([gateway/streaming.py](gateway/streaming.py)). The final chunk carries the `gateway` field.
+
 **Observability:** each request is one OpenTelemetry trace with a span per step. Prometheus scrapes `/metrics` (requests by verdict, blocks by layer and reason, latency histograms per step, tokens, and cost), and Grafana shows them on a provisioned dashboard. SQLite keeps a per-request cost log.
 
 <p align="center"><img src="assets/screenshots/grafana.png" alt="Grafana dashboard: requests, block rate, p95 added latency, cost today, and time series" width="100%"></p>
@@ -105,7 +107,8 @@ These are measured, not guessed:
 - **The classifier has known false-positive patterns.** It flags "remember X for later" and terse commands like "Log me please".
 - **p95 latency grows with prompt length.** It's ~490 ms at 400 tokens on a laptop CPU. A GPU or a distilled model would fix this.
 - **int8 quantization was tried and rejected.** It made the model 3× smaller and destroyed its accuracy.
-- **No streaming yet,** and the rate limiter is in-memory, so it's single-instance only.
+- **Streamed answers arrive a sentence at a time,** not token by token, because each sentence is checked for PII before it's released. Text with no sentence breaks (like one very long line of code) is released at a space after 2,000 characters, which could in theory split an entity.
+- **The rate limiter is in-memory,** so it's single-instance only.
 
 ## Development
 

@@ -6,7 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -20,6 +20,7 @@ from gateway.limits import Limits, start_of_day_utc
 from gateway.pipeline import Pipeline
 from gateway.schemas import ChatRequest
 from gateway.store import RequestStore
+from gateway.streaming import sse
 from gateway.upstreams import UpstreamError, build_upstream
 
 log = logging.getLogger("bulwark")
@@ -127,13 +128,13 @@ async def healthz(request: Request):
 
 @app.post("/v1/chat/completions")
 async def chat_completions(body: ChatRequest, request: Request):
-    if body.stream:
-        raise HTTPException(400, "Streaming is not supported by this gateway yet.")
     limits: Limits = request.app.state.limits
     limits.check_rate(request.client.host if request.client else "unknown")
     limits.check_size("".join(m.text() for m in body.messages))
     limits.check_spend(request.app.state.store.summary(since_ts=start_of_day_utc())["cost_usd"])
     pipeline: Pipeline = request.app.state.pipeline
+    if body.stream:
+        return await _stream(body, pipeline, request.app.state.store)
     try:
         completion, info = await pipeline.run(body)
     except UpstreamError as e:
@@ -142,3 +143,22 @@ async def chat_completions(body: ChatRequest, request: Request):
     request.app.state.store.record(info)
     completion["gateway"] = info.model_dump()
     return JSONResponse(completion, headers={"X-Gateway-Verdict": info.verdict})
+
+
+async def _stream(body: ChatRequest, pipeline: Pipeline, store: RequestStore):
+    """Server-sent events in OpenAI's format. Input guards finish before the first byte, so a
+    blocked prompt never reaches the model and the verdict header is known. The header holds
+    the input verdict; the final chunk's `gateway` field has the full one (incl. output PII)."""
+    prepared = await pipeline.prepare(body)
+    include_usage = bool((body.stream_options or {}).get("include_usage"))
+
+    async def events():
+        async for event in pipeline.stream(prepared, include_usage, on_done=store.record):
+            yield sse(event)
+
+    headers = {
+        "X-Gateway-Verdict": prepared.input_verdict,
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",  # stop reverse proxies from buffering the stream
+    }
+    return StreamingResponse(events(), media_type="text/event-stream", headers=headers)

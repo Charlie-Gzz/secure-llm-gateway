@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -26,3 +27,9 @@ class Upstream(Protocol):
     model: str
 
     async def complete(self, messages: list[ChatMessage], max_tokens: int) -> UpstreamResult: ...
+
+    def stream(
+        self, messages: list[ChatMessage], max_tokens: int
+    ) -> AsyncIterator[str | UpstreamResult]:
+        """Yield text deltas as they arrive, then one final UpstreamResult (full text, usage)."""
+        ...

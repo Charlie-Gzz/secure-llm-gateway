@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     max_tokens: int | None = None
     max_completion_tokens: int | None = None
     stream: bool = False
+    stream_options: dict[str, Any] | None = None  # OpenAI: {"include_usage": true}
 
 
 class Usage(BaseModel):

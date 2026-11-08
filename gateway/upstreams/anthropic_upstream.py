@@ -44,7 +44,7 @@ class AnthropicUpstream:
         self.effort = policy.effort
         self.client = anthropic.AsyncAnthropic(api_key=api_key, timeout=policy.timeout_s)
 
-    async def complete(self, messages: list[ChatMessage], max_tokens: int) -> UpstreamResult:
+    def _kwargs(self, messages: list[ChatMessage], max_tokens: int) -> dict:
         system, turns = to_anthropic(messages)
         kwargs: dict = {
             "model": self.model,
@@ -54,18 +54,35 @@ class AnthropicUpstream:
         }
         if system:
             kwargs["system"] = system
+        return kwargs
+
+    @staticmethod
+    def _result(msg) -> UpstreamResult:
+        return UpstreamResult(
+            text="".join(b.text for b in msg.content if b.type == "text"),
+            input_tokens=msg.usage.input_tokens,
+            output_tokens=msg.usage.output_tokens,
+            model=msg.model,
+            finish_reason=FINISH.get(msg.stop_reason or "", "stop"),
+        )
+
+    async def complete(self, messages: list[ChatMessage], max_tokens: int) -> UpstreamResult:
         try:
-            resp = await self.client.messages.create(**kwargs)
+            resp = await self.client.messages.create(**self._kwargs(messages, max_tokens))
         except anthropic.APIStatusError as e:
             raise UpstreamError(f"Anthropic API returned {e.status_code}") from e
         except anthropic.APIConnectionError as e:
             raise UpstreamError("Could not reach the Anthropic API") from e
+        return self._result(resp)
 
-        text = "".join(b.text for b in resp.content if b.type == "text")
-        return UpstreamResult(
-            text=text,
-            input_tokens=resp.usage.input_tokens,
-            output_tokens=resp.usage.output_tokens,
-            model=resp.model,
-            finish_reason=FINISH.get(resp.stop_reason or "", "stop"),
-        )
+    async def stream(self, messages: list[ChatMessage], max_tokens: int):
+        try:
+            async with self.client.messages.stream(**self._kwargs(messages, max_tokens)) as s:
+                async for text in s.text_stream:
+                    yield text
+                final = await s.get_final_message()
+        except anthropic.APIStatusError as e:
+            raise UpstreamError(f"Anthropic API returned {e.status_code}") from e
+        except anthropic.APIConnectionError as e:
+            raise UpstreamError("Could not reach the Anthropic API") from e
+        yield self._result(final)

@@ -85,6 +85,27 @@ function bubble(role, html, extraClass = "") {
   return wrap;
 }
 
+// Parse a server-sent event stream into JSON payloads (stops at [DONE]).
+async function* sseEvents(resp) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += decoder.decode(value, { stream: true });
+    let cut;
+    while ((cut = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      const data = frame.split("\n").filter((l) => l.startsWith("data: ")).map((l) => l.slice(6)).join("");
+      if (!data) continue;
+      if (data === "[DONE]") return;
+      yield JSON.parse(data);
+    }
+  }
+}
+
 function highlightPlaceholders(text) {
   return esc(text).replace(/&lt;([A-Z_]+)&gt;/g,
     '<span class="font-mono text-[12px] px-1.5 py-0.5 rounded bg-warn/15 text-warn">&lt;$1&gt;</span>');
@@ -105,12 +126,24 @@ async function send(text) {
     const resp = await fetch("/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "bulwark", messages }),
+      body: JSON.stringify({ model: "bulwark", messages, stream: true }),
     });
     if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`);
-    const body = await resp.json();
-    const gw = body.gateway;
-    const answer = body.choices[0].message.content;
+    // The answer streams in a sentence at a time (each sentence is PII-checked before it is
+    // released); the final chunk carries the full gateway verdict for the inspector.
+    let answer = "";
+    let gw = null;
+    for await (const event of sseEvents(resp)) {
+      if (event.error) throw new Error(event.error.message);
+      const delta = event.choices?.[0]?.delta?.content;
+      if (delta && resp.headers.get("X-Gateway-Verdict") !== "blocked") {
+        answer += delta;
+        pending.firstElementChild.innerHTML = highlightPlaceholders(answer);
+        $("chat").scrollTop = $("chat").scrollHeight;
+      }
+      if (event.gateway) gw = event.gateway;
+    }
+    if (!gw) throw new Error("stream ended without a verdict");
 
     if (gw.prompt_redacted) {
       userBubble.firstElementChild.insertAdjacentHTML("beforeend",
@@ -181,7 +214,10 @@ function stepDetail(name, step) {
     const ents = Object.entries(d.entities || {});
     return ents.length ? ents.map(([e, n]) => `<span class="font-mono text-warn">${esc(e)}</span>×${n}`).join(" ") : "No personal data found";
   }
-  if (name === "llm") return `<span class="font-mono">${esc(d.model)}</span> via ${esc(d.upstream)}`;
+  if (name === "llm") {
+    const ttft = d.first_token_ms != null ? ` · first token ${fmtMs(d.first_token_ms)}` : "";
+    return `<span class="font-mono">${esc(d.model)}</span> via ${esc(d.upstream)}${ttft}`;
+  }
   return "";
 }
 

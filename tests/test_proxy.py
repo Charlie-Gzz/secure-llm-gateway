@@ -41,14 +41,6 @@ def test_verdict_header(client):
     assert resp.headers["X-Gateway-Verdict"] in {"allowed", "redacted", "blocked"}
 
 
-def test_streaming_rejected(client):
-    resp = client.post(
-        "/v1/chat/completions",
-        json={"messages": [{"role": "user", "content": "hi"}], "stream": True},
-    )
-    assert resp.status_code == 400
-
-
 def test_request_logged_to_sqlite(client, db_path):
     body = chat(client, "What is a good name for a golden retriever?")
     rid = body["gateway"]["request_id"]

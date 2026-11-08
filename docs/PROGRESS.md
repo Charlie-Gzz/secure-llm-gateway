@@ -11,7 +11,7 @@
 - [x] M7: README + handoff
 - [x] Stretch 1: playground GIF
 - [x] Stretch 2: Locust load test
-- [ ] Stretch 3: streaming
+- [x] Stretch 3: streaming
 - [ ] Stretch 4: LLM-as-judge
 
 ## Log
@@ -27,7 +27,7 @@
 - **Stretch 1** — `scripts/record_gif.py` → `assets/playground.gif` (2.8 MB).
 - **Docs** — Mock upstream presented as a deliberate choice (Charlie: learning/showcase project, no API key needed).
 - **Stretch 2** — `make loadtest` (Locust, 1–64 users). Found that the CPU-bound guards blocked the event loop: capacity flattened at 18.7 req/s. Moved classifier + Presidio to a thread pool sized by a sweep (3 workers × 4 ONNX threads on 12 cores): 35.9 req/s, p95 at 32 users 1.1 s → 0.48 s. Re-ran `make eval`: accuracy identical, latency 37 ms p50 / 316 ms p95. Chart `assets/charts/load_test.png`. 58 tests.
+- **Stretch 3** — Streaming (`stream: true`): OpenAI chunk format, works with the OpenAI SDK, `include_usage`, blocked prompts stream a `content_filter` finish, mid-stream errors become an error event. Output PII is redacted per sentence so entities split across chunks never leak (tested with 1–3 character chunks). Playground streams; inspector shows time to first token. Jaeger trace verified. 66 tests.
 
 ## Next
-- Stretch 3: streaming (`stream: true`, SSE) with output PII redaction still applied.
-- Then stretch 4: LLM-as-judge for borderline classifier scores.
+- Stretch 4: LLM-as-judge for borderline classifier scores, added to the ablation.

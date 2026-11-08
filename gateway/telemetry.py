@@ -98,6 +98,21 @@ def span(name: str, **attributes: Any):
         yield s
 
 
+def start_span(name: str, parent=None, **attributes: Any):
+    """Start a span that is NOT made current: for spans that outlive one `with` block, like a
+    streamed response. End it with `.end()`; make it current briefly with `use_span`."""
+    ctx = trace.set_span_in_context(parent) if parent is not None else None
+    s = tracer.start_span(name, context=ctx)
+    for key, value in attributes.items():
+        s.set_attribute(key, value)
+    return s
+
+
+def use_span(s):
+    """Make `s` the current span inside a `with` block without ending it on exit."""
+    return trace.use_span(s, end_on_exit=False)
+
+
 def current_trace_id() -> str | None:
     ctx = trace.get_current_span().get_span_context()
     return format(ctx.trace_id, "032x") if ctx.is_valid else None
