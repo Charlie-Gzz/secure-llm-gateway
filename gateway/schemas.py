@@ -55,6 +55,8 @@ class GatewayInfo(BaseModel):
     steps: list[Step]
     scores: dict[str, float] = {}
     redactions: list[dict[str, Any]] = []
+    # The last user message as the LLM saw it (only set when input PII was redacted).
+    prompt_redacted: str | None = None
     latency_ms: dict[str, float] = {}
     usage: Usage = Usage()
     cost_usd: float = 0.0

@@ -75,6 +75,8 @@ class Settings:
     pii_enabled: bool
     otel_endpoint: str | None
     model_dir: Path
+    jaeger_url: str
+    grafana_url: str
 
 
 def _flag(name: str, default: bool) -> bool:
@@ -94,4 +96,6 @@ def get_settings() -> Settings:
         pii_enabled=_flag("PII_ENABLED", True),
         otel_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or None,
         model_dir=Path(os.getenv("MODEL_DIR", ROOT / "models")),
+        jaeger_url=os.getenv("PUBLIC_JAEGER_URL", "http://localhost:16686"),
+        grafana_url=os.getenv("PUBLIC_GRAFANA_URL", "http://localhost:3000"),
     )

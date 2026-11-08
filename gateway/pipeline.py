@@ -40,6 +40,7 @@ class Run:
     steps: list[Step] = field(default_factory=list)
     scores: dict[str, float] = field(default_factory=dict)
     redactions: list[dict[str, Any]] = field(default_factory=list)
+    prompt_redacted: str | None = None
 
     def redacted(self, where: str, hits: list[dict]) -> dict[str, int]:
         counts = _count(hits)
@@ -98,6 +99,9 @@ class Pipeline:
                 if found:
                     rec.status = "block" if cfg.action == "block" else "redact"
                 rec.detail = {"entities": run.redacted("input", found)}
+                if found:
+                    last_user = next((m for m in reversed(messages) if m.role == "user"), None)
+                    run.prompt_redacted = last_user.text() if last_user else None
             if rec.status == "block":
                 return self._blocked(run, "pii_input", "Prompt contains PII")
 
@@ -172,6 +176,7 @@ class Pipeline:
             steps=steps,
             scores=run.scores,
             redactions=run.redactions,
+            prompt_redacted=run.prompt_redacted,
             latency_ms=latency,
             usage=usage,
             cost_usd=cost_usd(

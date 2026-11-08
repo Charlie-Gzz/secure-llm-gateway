@@ -6,15 +6,17 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from gateway import telemetry
-from gateway.config import PRODUCT_NAME, Policy, get_settings
+from gateway.config import PRODUCT_NAME, ROOT, Policy, get_settings
 from gateway.guards.classifier import ClassifierGuard
 from gateway.guards.pii import PiiGuard
 from gateway.guards.rules import RulesGuard
+from gateway.limits import Limits, start_of_day_utc
 from gateway.pipeline import Pipeline
 from gateway.schemas import ChatRequest
 from gateway.store import RequestStore
@@ -65,6 +67,7 @@ async def lifespan(app: FastAPI):
     app.state.policy = policy
     app.state.pipeline = build_pipeline(settings, policy)
     app.state.store = RequestStore(settings.db_path)
+    app.state.limits = Limits.from_env()
     log.info("%s ready: upstream=%s", PRODUCT_NAME, app.state.pipeline.upstream.name)
     yield
     app.state.store.close()
@@ -76,6 +79,29 @@ app = FastAPI(title=f"{PRODUCT_NAME} LLM Gateway", version="0.1.0", lifespan=lif
 FastAPIInstrumentor.instrument_app(
     app, excluded_urls="healthz,metrics", exclude_spans=["receive", "send"]
 )
+
+
+app.mount("/ui", StaticFiles(directory=ROOT / "ui"), name="ui")
+
+
+@app.get("/", include_in_schema=False)
+async def playground():
+    return FileResponse(ROOT / "ui" / "index.html")
+
+
+@app.get("/config")
+async def public_config(request: Request):
+    """What the playground needs to render its header and links."""
+    settings = request.app.state.settings
+    pipeline: Pipeline = request.app.state.pipeline
+    return {
+        "product": PRODUCT_NAME,
+        "upstream": pipeline.upstream.name,
+        "model": pipeline.upstream.model,
+        "classifier_threshold": request.app.state.policy.guards.classifier.threshold,
+        "jaeger_url": settings.jaeger_url,
+        "grafana_url": settings.grafana_url,
+    }
 
 
 @app.get("/metrics", include_in_schema=False)
@@ -103,6 +129,10 @@ async def healthz(request: Request):
 async def chat_completions(body: ChatRequest, request: Request):
     if body.stream:
         raise HTTPException(400, "Streaming is not supported by this gateway yet.")
+    limits: Limits = request.app.state.limits
+    limits.check_rate(request.client.host if request.client else "unknown")
+    limits.check_size("".join(m.text() for m in body.messages))
+    limits.check_spend(request.app.state.store.summary(since_ts=start_of_day_utc())["cost_usd"])
     pipeline: Pipeline = request.app.state.pipeline
     try:
         completion, info = await pipeline.run(body)
