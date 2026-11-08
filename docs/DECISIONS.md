@@ -24,3 +24,11 @@ Format: `Decision | Options considered | Why I picked this | Easy to change? (ye
 | spaCy `en_core_web_lg` pinned as a wheel URL in `pyproject.toml` | `spacy download` at setup time | `uv sync` removes packages that aren't in the lockfile, so a downloaded model would vanish on the next sync | yes |
 | Rules guard tuned for precision; `no_restrictions` requires a response verb nearby | broad keyword match | Benign text like "a kingdom with no rules" must pass; the classifier handles subtler attacks | yes |
 | Pipeline order kept as Rules → Classifier → PII | PII first | Tested: the classifier false positive on "remember X for later" persists after redaction, so reordering wouldn't help | yes |
+| Root span from FastAPI auto-instrumentation, then `gateway.request` → `step.<name>` spans; ASGI receive/send spans excluded | manual spans only | One clickable trace per request with the HTTP span on top; receive/send spans add noise without information | yes |
+| Verdict, scores, cost, tokens as span attributes (`bulwark.*`) | span events, logs | Searchable in Jaeger (e.g. `bulwark.verdict=blocked`) | yes |
+| Prometheus `blocks_total` reason label = rule id or layer name | free-text reason | Keeps label cardinality bounded | yes |
+| Grafana dashboard generated from `observability/grafana/build_dashboard.py` (JSON committed) | hand-edited JSON | Python is reviewable in a minute; JSON is still what Grafana provisions | yes |
+| Pinned images: collector-contrib 0.165.0, Jaeger 2.23.0, Prometheus v3.16.0, Grafana 13.2.5 | `latest` | Reproducible `docker compose up` | yes |
+| Collector exporter `otlp_grpc` (not `otlp`) | `otlp` | `otlp` alias is deprecated in collector 0.165 | yes |
+| Classifier + spaCy model baked into the image (3.3 GB) | mount `./models` at runtime | A stranger can `docker compose up` with no setup step; BuildKit cache mount keeps uv's cache out of the image (was 4.85 GB) | yes |
+| Removed `onnx` dependency | keep | Only needed for quantization, which was rejected | yes |

@@ -8,7 +8,6 @@ import pytest
 # Offline, fast, isolated settings for every test run.
 os.environ["UPSTREAM"] = "mock"
 os.environ["MOCK_LATENCY_MS"] = "0"
-os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
 
 @pytest.fixture(scope="session")

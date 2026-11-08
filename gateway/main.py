@@ -6,8 +6,11 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from gateway import telemetry
 from gateway.config import PRODUCT_NAME, Policy, get_settings
 from gateway.guards.classifier import ClassifierGuard
 from gateway.guards.pii import PiiGuard
@@ -67,7 +70,17 @@ async def lifespan(app: FastAPI):
     app.state.store.close()
 
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+telemetry.setup_tracing(get_settings().otel_endpoint)
 app = FastAPI(title=f"{PRODUCT_NAME} LLM Gateway", version="0.1.0", lifespan=lifespan)
+FastAPIInstrumentor.instrument_app(
+    app, excluded_urls="healthz,metrics", exclude_spans=["receive", "send"]
+)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/healthz")
