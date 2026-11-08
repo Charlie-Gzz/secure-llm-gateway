@@ -3,7 +3,7 @@
 
 PORT ?= 8000
 
-.PHONY: setup run test lint fmt traffic eval eval-cost assets models up down
+.PHONY: setup run test lint fmt traffic eval eval-cost assets gif models up down
 
 setup:          ## Install deps (incl. spaCy model) and download the ONNX classifier
 	uv sync
@@ -36,6 +36,9 @@ assets:         ## Regenerate charts, diagram, and screenshots into assets/
 	uv run python scripts/make_charts.py
 	uv run python scripts/make_diagram.py
 	uv run python scripts/screenshots.py
+
+gif:            ## Record the playground GIF for the README (needs the stack + ffmpeg)
+	uv run python scripts/record_gif.py
 
 models:         ## Download + export the ONNX classifier
 	uv run python scripts/export_classifier.py

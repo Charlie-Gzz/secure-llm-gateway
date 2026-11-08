@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/playground-hero.png" alt="Bulwark playground: chat on the left, request inspector showing each guard's verdict on the right" width="100%">
+  <img src="assets/playground.gif" alt="Bulwark playground: clicking examples lights up each guard in the request inspector (green pass, red block, amber redact)" width="100%">
 </p>
 
 | | |

@@ -8,7 +8,11 @@
 - [x] M4: evaluation
 - [x] M5: playground UI
 - [x] M6: visual assets + portfolio kit
-- [ ] M7: README + handoff
+- [x] M7: README + handoff
+- [x] Stretch 1: playground GIF
+- [ ] Stretch 2: Locust load test
+- [ ] Stretch 3: streaming
+- [ ] Stretch 4: LLM-as-judge
 
 ## Log
 - **M0** â€” Installed uv 0.13.7 and Python 3.12.16. Docker Desktop was not running; started it. PyPI and Hugging Face reachable. No API key â†’ `UPSTREAM=mock`. Private repo created.
@@ -19,6 +23,9 @@
 - **M4** — `make eval`: 2,962 prompts (deepset, Gandalf, in-the-wild jailbreaks, no_robots, 60 hand-written holdout). Headline: catches 84.3% of attacks with 0.4% FPR, guards add 39 ms p50 / 329 ms p95 on benign prompts. Holdout recall 93.3%. Rules bugs found by the near-miss holdout fixed (v1 numbers kept in DECISIONS).
 - **M5** — Playground at `/`: chat + request inspector, 6 example buttons, each verified to produce its intended pipeline (normal=all green, ignore=rules red, ssn=pii amber, roleplay=classifier red, indirect=classifier red, contact=pii-answer amber).
 - **M6** — `make assets`: 5 charts (PNG 1600px + SVG, CVD-validated palette) + Plotly page, architecture diagram (SVG w/ embedded fonts + PNG), 9 Playwright screenshots (playground ×7, Grafana, Jaeger). DEMO_SCRIPT, SLIDES_OUTLINE, PORTFOLIO_CARD written. deploy/ (Cloud Run + Fly) with in-app rate/size/spend limits. CI workflow.
+- **M7** — README (GIF hero, quickstart, how it works, results, limitations), LICENSE, `eval/cost_check.py`. Fresh clone from GitHub → `docker compose up` → healthy, traffic flows to Prometheus/Jaeger/Grafana. HANDOFF written. CI green (57 tests incl. ML).
+- **Stretch 1** — `scripts/record_gif.py` → `assets/playground.gif` (2.8 MB).
 
 ## Next
-- M7: README, fresh-clone `docker compose up` check, HANDOFF.
+- Stretch 2: Locust load test (throughput + latency chart) against the mock upstream.
+- Then streaming, then LLM-as-judge for borderline classifier scores.
