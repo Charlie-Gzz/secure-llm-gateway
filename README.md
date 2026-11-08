@@ -42,8 +42,11 @@ open http://localhost:8000          # playground (Windows: start http://localhos
 | http://localhost:3000 | Grafana dashboard (no login) |
 | http://localhost:16686 | Jaeger traces |
 
-It runs fully offline against a built-in **mock upstream**, so no API key is needed. To use Claude,
-copy `.env.example` to `.env`, set `ANTHROPIC_API_KEY`, and set `UPSTREAM=anthropic`.
+**No API key, no account, no bill.** By design, Bulwark runs fully offline against a built-in
+mock model, so anyone can clone it and see every guard, trace, and chart work. The guards run
+*before* the model is called, so every detection and latency number above is real either way.
+The Claude upstream (`claude-haiku-5-5` through the official SDK) is built in: copy
+`.env.example` to `.env`, set `ANTHROPIC_API_KEY`, and set `UPSTREAM=anthropic`.
 Run `make traffic` to fill the dashboard.
 
 ## How it works
@@ -81,7 +84,7 @@ Every response carries a `gateway` field and an `X-Gateway-Verdict` header. They
 </p>
 
 - **Datasets:** `deepset/prompt-injections`, `Lakera/gandalf_ignore_instructions`, `TrustAIRLab/in-the-wild-jailbreak-prompts`, and `HuggingFaceH4/no_robots` (benign). None of them is in the classifier's training data. There's also a hand-written holdout of 30 attacks and 30 near-miss benign prompts ([eval/holdout.jsonl](eval/holdout.jsonl)).
-- **Cost per 1K requests:** about $0.17 of Claude Haiku spend. The guards add $0.004 of CPU time, and blocking attacks saves about $0.03.
+- **Cost per 1K requests:** about $0.17 of Claude Haiku spend. The guards add $0.004 of CPU time, and blocking attacks saves about $0.03. These are estimates from token counts and list prices (assumptions in the report). Anyone with a key can check them with `make eval-cost` (at most 100 real requests).
 - **What the ablation shows:** the classifier does the heavy lifting. Rules add little recall on top, but they're explainable and skip the classifier for obvious attacks.
 
 [Interactive charts](assets/charts/index.html) · [Demo script](docs/DEMO_SCRIPT.md) · [Design decisions](docs/DECISIONS.md)

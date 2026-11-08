@@ -44,14 +44,14 @@ Other targets: `make test`, `make lint`, `make eval`, `make assets` (needs the s
 - Docs: `docs/DEMO_SCRIPT.md`, `docs/SLIDES_OUTLINE.md`, `docs/PORTFOLIO_CARD.md`.
 
 ## 5. Questions on direction (details in QUESTIONS_FOR_CHARLIE.md)
-1. **Add an API key and run `make eval-cost`?** Everything currently runs on the mock upstream. *Recommendation:* create a key with a low monthly limit, put it in `.env` (`ANTHROPIC_API_KEY`, `UPSTREAM=anthropic`), and run `make eval-cost` (50 requests, a fraction of a cent) to confirm the cost-per-1K estimate.
+1. ~~**API key**~~ *Resolved:* the mock upstream stays the default on purpose (a learning and portfolio project, not a service). The README presents "runs offline, no key needed" as a feature.
 2. **Should the rules layer block or only observe?** It adds little recall but makes verdicts explainable and skips the classifier on obvious attacks. *Recommendation:* keep it blocking and tell the honest ablation story: "the classifier does the heavy lifting".
 3. **Do a speed pass on p95 latency?** The classifier's cost grows steeply with prompt length, and thread tuning didn't help. *Recommendation:* present p50 and p95 as they are for now; if you want a better number, try ONNX Runtime's transformer optimizer or a distilled model, and re-run `make eval`.
 4. **How loudly to state the limitations?** These are English-only detection, some indirect injections, and role-play jailbreaks. *Recommendation:* keep the README's Limitations section; it builds credibility. The LLM-as-judge stretch item would address borderline cases.
 5. **Name and visibility.** I chose "Bulwark" but didn't check trademark or package-name conflicts. The repo stays private until you review it. *Recommendation:* do a quick name search, then make it public.
 
 ## 6. Skipped or simplified, and why
-- **Mock upstream everywhere:** no `GATEWAY_ANTHROPIC_API_KEY` was set, so no real Claude call was ever made. The Anthropic upstream is implemented and unit-tested only for message translation. `make eval-cost` exists but hasn't been run.
+- **Mock upstream by design:** no real Claude call was made, by choice. The Anthropic upstream is implemented and unit-tested for message translation; `make eval-cost` is an optional check for anyone with a key.
 - **Cost numbers are estimates:** about 4 characters per token, plus an assumed 150-token system prompt and 300 output tokens (listed in `results.md`).
 - **int8 quantization was rejected:** it destroyed accuracy. The fp32 model is served, and the lesson is logged.
 - **The rules were tuned once after seeing the holdout:** three real bugs, fixed with general patterns and regression tests. The v1 numbers are logged in DECISIONS.md, and the holdout is no longer fully blind for the rules layer.
