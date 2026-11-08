@@ -1,0 +1,39 @@
+[project]
+name = "bulwark-gateway"
+version = "0.1.0"
+description = "Bulwark: a drop-in LLM security gateway that blocks prompt injection, redacts PII, and shows what happened to every request."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "anthropic>=0.40",
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "httpx>=0.27",
+    "openai>=1.50",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"

@@ -1,0 +1,61 @@
+# Bulwark policy: the single place to tune what the gateway allows, redacts, or blocks.
+# Actions: allow | redact | block
+# Edit and restart the gateway to apply.
+
+upstream:
+  # Cheapest current Claude model (checked against Anthropic's model table, Nov 2026).
+  model: claude-haiku-5-5
+  max_tokens: 1024
+  # Haiku 5.5 thinks adaptively by default; "low" effort keeps latency and cost down for a proxy.
+  effort: low
+  timeout_s: 60
+
+# USD per 1M tokens. Keep prices here, never in code.
+pricing:
+  claude-haiku-5-5: { input: 0.10, output: 0.50 }
+  # The mock upstream is priced like Haiku so dashboards and eval show realistic dollar numbers.
+  mock-haiku: { input: 0.10, output: 0.50 }
+
+guards:
+  rules:
+    enabled: true
+    action: block
+
+  classifier:
+    enabled: true
+    action: block
+    # Probability of the INJECTION class at or above which a prompt is blocked.
+    threshold: 0.90
+    # Prompts are scored in overlapping windows of this many tokens (the model's max is 512).
+    max_length: 512
+
+  pii_input:
+    enabled: true
+    action: redact # redact | block
+    min_score: 0.5
+    entities:
+      - US_SSN
+      - CREDIT_CARD
+      - EMAIL_ADDRESS
+      - PHONE_NUMBER
+      - IBAN_CODE
+      - US_PASSPORT
+      - IP_ADDRESS
+      - PERSON
+
+  pii_output:
+    enabled: true
+    action: redact
+    min_score: 0.5
+    entities:
+      - US_SSN
+      - CREDIT_CARD
+      - EMAIL_ADDRESS
+      - PHONE_NUMBER
+      - IBAN_CODE
+      - US_PASSPORT
+      - IP_ADDRESS
+
+# Message returned to the client in place of a model answer when a request is blocked.
+blocked_message: >-
+  This request was blocked by Bulwark's security policy. See the `gateway` field for details.
