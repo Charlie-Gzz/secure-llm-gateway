@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Runtime data
+data/
+*.db
+*.sqlite
+models/
+
+# Eval scratch
+eval/data/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
