@@ -1,0 +1,60 @@
+# Cloud Run service for the public Bulwark demo. PREPARED ONLY: not deployed.
+# Deploy (after review):
+#   gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT/bulwark/gateway:v1
+#   gcloud run services replace deploy/cloudrun.yaml --region REGION
+#
+# Guardrails for a public demo:
+#   - RATE_LIMIT_RPM: per-client requests per minute (enforced in gateway/limits.py)
+#   - MAX_INPUT_CHARS: rejects oversized prompts before any guard runs (413)
+#   - DAILY_SPEND_CAP_USD: stops upstream calls once today's spend (from SQLite) hits the cap
+#   - policy.yaml upstream.max_tokens caps output tokens per request (1024)
+#   - maxScale 1 + concurrency 20 bounds total throughput (and keeps the in-memory limiter exact)
+#   - Set a budget alert in Cloud Billing and a monthly limit on the Anthropic key as a backstop.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: bulwark-gateway
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "1"
+        run.googleapis.com/cpu-throttling: "true"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      containerConcurrency: 20
+      timeoutSeconds: 60
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT/bulwark/gateway:v1
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          env:
+            - name: UPSTREAM
+              value: anthropic
+            - name: RATE_LIMIT_RPM
+              value: "20"
+            - name: MAX_INPUT_CHARS
+              value: "4000"
+            - name: DAILY_SPEND_CAP_USD
+              value: "2"
+            - name: DB_PATH
+              value: /tmp/gateway.db
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bulwark-anthropic-key
+                  key: latest
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24

@@ -1,0 +1,39 @@
+# Fly.io alternative for the public demo. PREPARED ONLY: not deployed.
+#   fly launch --no-deploy --copy-config && fly secrets set ANTHROPIC_API_KEY=... && fly deploy
+app = "bulwark-gateway"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  UPSTREAM = "anthropic"
+  RATE_LIMIT_RPM = "20"
+  MAX_INPUT_CHARS = "4000"
+  DAILY_SPEND_CAP_USD = "2"
+  DB_PATH = "/data/gateway.db"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 15
+    hard_limit = 20
+
+[[http_service.checks]]
+  path = "/healthz"
+  interval = "15s"
+  timeout = "3s"
+  grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "4gb"
+
+[mounts]
+  source = "bulwark_data"
+  destination = "/data"

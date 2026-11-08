@@ -111,7 +111,12 @@ def bargauge(title, expr, legend, pos, unit="short", color=CYAN, fmt=None, desc=
         "gridPos": pos,
         "targets": [target(expr, legend, instant=True, fmt=fmt)],
         "fieldConfig": {
-            "defaults": {"unit": unit, "min": 0, "color": {"mode": "fixed", "fixedColor": color}},
+            "defaults": {
+                "unit": unit,
+                "min": 0,
+                "decimals": 0,
+                "color": {"mode": "fixed", "fixedColor": color},
+            },
             "overrides": [],
         },
         "options": {
@@ -227,7 +232,7 @@ def build() -> dict:
         ),
         bargauge(
             "Classifier score distribution",
-            f"sum by (le) (increase(bulwark_classifier_score_bucket{rng}))",
+            f'sum by (le) (increase(bulwark_classifier_score_bucket{{le!="+Inf"}}{rng}))',
             "≤ {{le}}",
             {"x": 0, "y": 23, "w": 8, "h": 9},
             color=CYAN,

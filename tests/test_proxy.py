@@ -95,3 +95,23 @@ def test_openai_to_anthropic_translation():
         {"role": "user", "content": "part 1\n\npart 2"},
         {"role": "assistant", "content": "ok"},
     ]
+
+
+def test_limits():
+    import pytest
+    from fastapi import HTTPException
+
+    from gateway.limits import Limits
+
+    lim = Limits(rpm=2, max_input_chars=10, daily_spend_usd=1.0)
+    lim.check_rate("a")
+    lim.check_rate("a")
+    with pytest.raises(HTTPException) as e:
+        lim.check_rate("a")
+    assert e.value.status_code == 429
+    lim.check_rate("b")  # other clients unaffected
+    with pytest.raises(HTTPException):
+        lim.check_size("x" * 11)
+    with pytest.raises(HTTPException):
+        lim.check_spend(1.0)
+    Limits().check_rate("a")  # all disabled by default

@@ -667,7 +667,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (le) (increase(bulwark_classifier_score_bucket[$__range]))",
+          "expr": "sum by (le) (increase(bulwark_classifier_score_bucket{le!=\"+Inf\"}[$__range]))",
           "legendFormat": "≤ {{le}}",
           "refId": "A",
           "instant": true,
@@ -679,6 +679,7 @@
         "defaults": {
           "unit": "short",
           "min": 0,
+          "decimals": 0,
           "color": {
             "mode": "fixed",
             "fixedColor": "#38BDF8"
@@ -734,6 +735,7 @@
         "defaults": {
           "unit": "short",
           "min": 0,
+          "decimals": 0,
           "color": {
             "mode": "fixed",
             "fixedColor": "#F59E0B"

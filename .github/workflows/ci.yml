@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.7"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Cache classifier model
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: classifier-${{ hashFiles('scripts/export_classifier.py') }}
+
+      - name: Download classifier (ONNX)
+        run: test -f models/prompt-injection/model.onnx || uv run python scripts/export_classifier.py
+
+      - name: Test (mock upstream, no API key)
+        run: uv run pytest -q
+        env:
+          UPSTREAM: mock
