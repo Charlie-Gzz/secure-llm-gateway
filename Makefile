@@ -3,7 +3,7 @@
 
 PORT ?= 8000
 
-.PHONY: setup run test lint fmt traffic eval eval-cost assets gif models up down
+.PHONY: setup run test lint fmt traffic loadtest eval eval-cost assets gif models up down
 
 setup:          ## Install deps (incl. spaCy model) and download the ONNX classifier
 	uv sync
@@ -25,6 +25,9 @@ fmt:            ## Auto-fix lint and format
 
 traffic:        ## Send a realistic mix of benign + attack traffic to a running gateway
 	uv run python scripts/traffic.py
+
+loadtest:       ## Locust load test (1-64 users) against a running mock gateway -> eval/results/load_test.json
+	uv run python scripts/load_test.py
 
 eval:           ## Regenerate all evaluation numbers from scratch
 	uv run python eval/run_eval.py

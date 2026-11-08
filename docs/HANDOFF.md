@@ -1,7 +1,7 @@
 # Handoff
 
-Milestones M0–M7 are done, plus stretch item 1 (the README GIF). The private repo is
-https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 57 tests).
+Milestones M0–M7 are done, plus stretch items 1 (the README GIF) and 2 (the Locust load test). The private repo is
+https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 58 tests).
 
 ## 1. What was built
 - **Bulwark**, an OpenAI-compatible gateway (`POST /v1/chat/completions`) in FastAPI. It has a Claude upstream (`claude-haiku-5-5` through the official SDK) and an offline mock upstream.
@@ -15,6 +15,7 @@ https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 57 te
 - **Evaluation** (`make eval`): about 3,000 prompts from 4 public datasets plus a hand-written holdout of 30 attacks and 30 near-miss benign prompts. It covers the ablation, per-source recall, a threshold sweep, latency per layer, and cost per 1K requests.
 - **Playground** at `/`: chat plus a request inspector with 6 one-click examples. Each example was verified to light up the intended pipeline.
 - **Portfolio kit:** charts, diagram, screenshots, a GIF, a demo script, a slides outline, and a portfolio card.
+- **Load test** (`make loadtest`): Locust from 1 to 64 users. It found that the guards blocked the async event loop; moving them to a sized thread pool took capacity from 19 to 36 req/s on a laptop, with single-request latency unchanged.
 - **Deploy configs** for Cloud Run and Fly.io, prepared but not deployed. They rely on in-app limits: rate limit, prompt-size cap, and daily spend cap.
 
 ## 2. How to run it
@@ -25,15 +26,15 @@ uv run python scripts/traffic.py # or `make traffic`, to fill the dashboard
 ```
 Local development (no Docker): `uv sync && uv run python scripts/export_classifier.py && make run`.
 On Windows, use `mingw32-make <target>` if GNU make isn't installed.
-Other targets: `make test`, `make lint`, `make eval`, `make assets` (needs the stack running), `make gif`, and `make eval-cost` (needs an API key, max 100 requests).
+Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make assets` (both need the stack running), `make gif`, and `make eval-cost` (needs an API key, max 100 requests).
 
 ## 3. Headline results (eval/results/results.md)
 - **Catches 84.3% of prompt-injection attacks with 0.4% false positives** (precision 99.5%, F1 91.3%) on 1,563 public attacks and 1,399 benign prompts.
 - **93.3% recall on hand-written holdout attacks** that aren't in any dataset. The near-miss benign false-positive rate is 6.7%.
 - **Ablation:** rules alone get 36.7% recall at 0% FPR; the classifier alone gets 83.9%; the two together get 84.3%.
 - **Recall by source:** Gandalf 99.9%, in-the-wild jailbreaks 71%, deepset 40% (many misses are German or role-play prompts that deepset labels as injections).
-- **Latency on benign prompts:** guards add 39 ms at p50 and 329 ms at p95. Rules take 0.1 ms, PII 7 ms, and the classifier 32 ms at p50.
-- **Cost per 1K requests:** about $0.17 of Haiku spend, $0.004 of guard CPU time, and about $0.03 saved by blocking attacks. These are computed from token estimates; no real API run yet.
+- **Latency on benign prompts:** guards add 37 ms at p50 and 316 ms at p95. Rules take 0.1 ms, PII 7 ms, and the classifier 30 ms at p50.
+- **Cost per 1K requests:** about $0.17 of Haiku spend, $0.003 of guard CPU time, and about $0.03 saved by blocking attacks. These are computed from token estimates (the project runs on the mock upstream by design).
 
 ## 4. Visual assets (`assets/`)
 - `charts/`: ablation, latency, precision_recall, cost_per_1k, and recall_by_source as PNG (1600 px) and SVG, plus `index.html` (interactive Plotly).
@@ -56,5 +57,6 @@ Other targets: `make test`, `make lint`, `make eval`, `make assets` (needs the s
 - **int8 quantization was rejected:** it destroyed accuracy. The fp32 model is served, and the lesson is logged.
 - **The rules were tuned once after seeing the holdout:** three real bugs, fixed with general patterns and regression tests. The v1 numbers are logged in DECISIONS.md, and the holdout is no longer fully blind for the rules layer.
 - **The fresh-clone test reused Docker's layer cache.** The layers matched by content, so the files are identical. The actual model download inside the Dockerfile was verified on the first, uncached build.
-- **Stretch items 2–4 weren't done:** a Locust load test, streaming, and an LLM-as-judge layer.
+- **Stretch items 3–4 aren't done yet:** streaming and an LLM-as-judge layer.
+- **The load test runs on the same laptop as the gateway,** so Locust competes for CPU; absolute req/s numbers are machine-specific, the before/after comparison is the point.
 - **Not deployed anywhere,** as the plan requires. The configs in `deploy/` are ready for review.

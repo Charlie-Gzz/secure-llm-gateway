@@ -1,0 +1,584 @@
+{
+  "runs": {
+    "Before: guards on the event loop": {
+      "steps": [
+        {
+          "users": 1,
+          "requests": 34,
+          "failures": 0,
+          "rps": 0.8656703458166597,
+          "p50_ms": 190.0,
+          "p95_ms": 280.0,
+          "p99_ms": 320.0,
+          "by_category": {
+            "benign": {
+              "requests": 24,
+              "failures": 0,
+              "rps": 0.6110614205764656,
+              "p50_ms": 210.0,
+              "p95_ms": 280.0,
+              "p99_ms": 320.0
+            },
+            "attack": {
+              "requests": 10,
+              "failures": 0,
+              "rps": 0.254608925240194,
+              "p50_ms": 13.0,
+              "p95_ms": 120.0,
+              "p99_ms": 120.0
+            }
+          }
+        },
+        {
+          "users": 4,
+          "requests": 133,
+          "failures": 0,
+          "rps": 3.401567638759287,
+          "p50_ms": 210.0,
+          "p95_ms": 290.0,
+          "p99_ms": 570.0,
+          "by_category": {
+            "benign": {
+              "requests": 78,
+              "failures": 0,
+              "rps": 1.9949043294979276,
+              "p50_ms": 230.0,
+              "p95_ms": 260.0,
+              "p99_ms": 290.0
+            },
+            "pii": {
+              "requests": 17,
+              "failures": 0,
+              "rps": 0.4347868410444201,
+              "p50_ms": 230.0,
+              "p95_ms": 630.0,
+              "p99_ms": 630.0
+            },
+            "attack": {
+              "requests": 38,
+              "failures": 0,
+              "rps": 0.9718764682169391,
+              "p50_ms": 16.0,
+              "p95_ms": 130.0,
+              "p99_ms": 140.0
+            }
+          }
+        },
+        {
+          "users": 8,
+          "requests": 268,
+          "failures": 0,
+          "rps": 6.844935408310916,
+          "p50_ms": 220.0,
+          "p95_ms": 290.0,
+          "p99_ms": 350.0,
+          "by_category": {
+            "benign": {
+              "requests": 176,
+              "failures": 0,
+              "rps": 4.495181462174333,
+              "p50_ms": 230.0,
+              "p95_ms": 300.0,
+              "p99_ms": 380.0
+            },
+            "pii": {
+              "requests": 33,
+              "failures": 0,
+              "rps": 0.8428465241576875,
+              "p50_ms": 220.0,
+              "p95_ms": 300.0,
+              "p99_ms": 340.0
+            },
+            "attack": {
+              "requests": 59,
+              "failures": 0,
+              "rps": 1.5069074219788956,
+              "p50_ms": 25.0,
+              "p95_ms": 100.0,
+              "p99_ms": 330.0
+            }
+          }
+        },
+        {
+          "users": 16,
+          "requests": 507,
+          "failures": 0,
+          "rps": 12.986730544038918,
+          "p50_ms": 240.0,
+          "p95_ms": 460.0,
+          "p99_ms": 670.0,
+          "by_category": {
+            "benign": {
+              "requests": 325,
+              "failures": 0,
+              "rps": 8.324827271819819,
+              "p50_ms": 280.0,
+              "p95_ms": 470.0,
+              "p99_ms": 820.0
+            },
+            "pii": {
+              "requests": 68,
+              "failures": 0,
+              "rps": 1.741810013796147,
+              "p50_ms": 250.0,
+              "p95_ms": 490.0,
+              "p99_ms": 530.0
+            },
+            "attack": {
+              "requests": 114,
+              "failures": 0,
+              "rps": 2.920093258422952,
+              "p50_ms": 50.0,
+              "p95_ms": 140.0,
+              "p99_ms": 170.0
+            }
+          }
+        },
+        {
+          "users": 32,
+          "requests": 724,
+          "failures": 0,
+          "rps": 18.423974339977175,
+          "p50_ms": 770.0,
+          "p95_ms": 1100.0,
+          "p99_ms": 2000.0,
+          "by_category": {
+            "benign": {
+              "requests": 500,
+              "failures": 0,
+              "rps": 12.723739185067108,
+              "p50_ms": 840.0,
+              "p95_ms": 1100.0,
+              "p99_ms": 3000.0
+            },
+            "pii": {
+              "requests": 83,
+              "failures": 0,
+              "rps": 2.1121407047211402,
+              "p50_ms": 740.0,
+              "p95_ms": 1100.0,
+              "p99_ms": 1200.0
+            },
+            "attack": {
+              "requests": 141,
+              "failures": 0,
+              "rps": 3.5880944501889247,
+              "p50_ms": 260.0,
+              "p95_ms": 440.0,
+              "p99_ms": 930.0
+            }
+          }
+        },
+        {
+          "users": 64,
+          "requests": 735,
+          "failures": 0,
+          "rps": 18.69128178343784,
+          "p50_ms": 2000.0,
+          "p95_ms": 3600.0,
+          "p99_ms": 21000.0,
+          "by_category": {
+            "benign": {
+              "requests": 506,
+              "failures": 0,
+              "rps": 12.867739567917752,
+              "p50_ms": 2300.0,
+              "p95_ms": 3600.0,
+              "p99_ms": 20000.0
+            },
+            "pii": {
+              "requests": 76,
+              "failures": 0,
+              "rps": 1.9327039667228243,
+              "p50_ms": 1900.0,
+              "p95_ms": 3500.0,
+              "p99_ms": 26000.0
+            },
+            "attack": {
+              "requests": 153,
+              "failures": 0,
+              "rps": 3.8908382487972646,
+              "p50_ms": 820.0,
+              "p95_ms": 4300.0,
+              "p99_ms": 23000.0
+            }
+          }
+        }
+      ],
+      "seconds_per_step": 40,
+      "think_time_s": [
+        0.5,
+        1.5
+      ],
+      "gateway": {
+        "status": "ok",
+        "product": "Bulwark",
+        "upstream": "mock",
+        "model": "mock-haiku",
+        "guards": {
+          "rules": true,
+          "classifier": true,
+          "pii": true
+        }
+      },
+      "machine": "Windows AMD64, load generator on the same machine",
+      "timestamp": "2026-11-08T23:01:20Z"
+    },
+    "After: guards in a thread pool": {
+      "steps": [
+        {
+          "users": 1,
+          "requests": 34,
+          "failures": 0,
+          "rps": 0.8843428492519849,
+          "p50_ms": 190.0,
+          "p95_ms": 270.0,
+          "p99_ms": 310.0,
+          "by_category": {
+            "benign": {
+              "requests": 20,
+              "failures": 0,
+              "rps": 0.5202016760305793,
+              "p50_ms": 230.0,
+              "p95_ms": 310.0,
+              "p99_ms": 310.0
+            },
+            "pii": {
+              "requests": 4,
+              "failures": 0,
+              "rps": 0.10404033520611587,
+              "p50_ms": 180.0,
+              "p95_ms": 230.0,
+              "p99_ms": 230.0
+            },
+            "attack": {
+              "requests": 10,
+              "failures": 0,
+              "rps": 0.26010083801528966,
+              "p50_ms": 22.0,
+              "p95_ms": 61.0,
+              "p99_ms": 61.0
+            }
+          }
+        },
+        {
+          "users": 4,
+          "requests": 137,
+          "failures": 0,
+          "rps": 3.5048410990427703,
+          "p50_ms": 200.0,
+          "p95_ms": 290.0,
+          "p99_ms": 310.0,
+          "by_category": {
+            "benign": {
+              "requests": 94,
+              "failures": 0,
+              "rps": 2.4047814840147472,
+              "p50_ms": 220.0,
+              "p95_ms": 290.0,
+              "p99_ms": 320.0
+            },
+            "pii": {
+              "requests": 13,
+              "failures": 0,
+              "rps": 0.3325761626828906,
+              "p50_ms": 210.0,
+              "p95_ms": 260.0,
+              "p99_ms": 260.0
+            },
+            "attack": {
+              "requests": 30,
+              "failures": 0,
+              "rps": 0.7674834523451322,
+              "p50_ms": 20.0,
+              "p95_ms": 61.0,
+              "p99_ms": 61.0
+            }
+          }
+        },
+        {
+          "users": 8,
+          "requests": 267,
+          "failures": 0,
+          "rps": 6.815078298302141,
+          "p50_ms": 210.0,
+          "p95_ms": 280.0,
+          "p99_ms": 330.0,
+          "by_category": {
+            "benign": {
+              "requests": 184,
+              "failures": 0,
+              "rps": 4.696533359129565,
+              "p50_ms": 220.0,
+              "p95_ms": 290.0,
+              "p99_ms": 340.0
+            },
+            "pii": {
+              "requests": 34,
+              "failures": 0,
+              "rps": 0.8678376859261153,
+              "p50_ms": 180.0,
+              "p95_ms": 280.0,
+              "p99_ms": 310.0
+            },
+            "attack": {
+              "requests": 49,
+              "failures": 0,
+              "rps": 1.2507072532464603,
+              "p50_ms": 20.0,
+              "p95_ms": 100.0,
+              "p99_ms": 110.0
+            }
+          }
+        },
+        {
+          "users": 16,
+          "requests": 527,
+          "failures": 0,
+          "rps": 13.431890382900276,
+          "p50_ms": 220.0,
+          "p95_ms": 310.0,
+          "p99_ms": 460.0,
+          "by_category": {
+            "benign": {
+              "requests": 346,
+              "failures": 0,
+              "rps": 8.818660479095817,
+              "p50_ms": 240.0,
+              "p95_ms": 320.0,
+              "p99_ms": 470.0
+            },
+            "pii": {
+              "requests": 57,
+              "failures": 0,
+              "rps": 1.4527851078279235,
+              "p50_ms": 230.0,
+              "p95_ms": 370.0,
+              "p99_ms": 500.0
+            },
+            "attack": {
+              "requests": 124,
+              "failures": 0,
+              "rps": 3.1604447959765354,
+              "p50_ms": 27.0,
+              "p95_ms": 100.0,
+              "p99_ms": 200.0
+            }
+          }
+        },
+        {
+          "users": 32,
+          "requests": 992,
+          "failures": 0,
+          "rps": 25.3013513516554,
+          "p50_ms": 270.0,
+          "p95_ms": 480.0,
+          "p99_ms": 860.0,
+          "by_category": {
+            "benign": {
+              "requests": 658,
+              "failures": 0,
+              "rps": 16.782549586077877,
+              "p50_ms": 290.0,
+              "p95_ms": 500.0,
+              "p99_ms": 890.0
+            },
+            "pii": {
+              "requests": 128,
+              "failures": 0,
+              "rps": 3.2646904969877935,
+              "p50_ms": 260.0,
+              "p95_ms": 540.0,
+              "p99_ms": 740.0
+            },
+            "attack": {
+              "requests": 206,
+              "failures": 0,
+              "rps": 5.25411126858973,
+              "p50_ms": 33.0,
+              "p95_ms": 130.0,
+              "p99_ms": 360.0
+            }
+          }
+        },
+        {
+          "users": 64,
+          "requests": 1407,
+          "failures": 0,
+          "rps": 35.88566519939706,
+          "p50_ms": 920.0,
+          "p95_ms": 1200.0,
+          "p99_ms": 1600.0,
+          "by_category": {
+            "benign": {
+              "requests": 916,
+              "failures": 0,
+              "rps": 23.362664763786572,
+              "p50_ms": 980.0,
+              "p95_ms": 1200.0,
+              "p99_ms": 1700.0
+            },
+            "pii": {
+              "requests": 180,
+              "failures": 0,
+              "rps": 4.5909166566392825,
+              "p50_ms": 870.0,
+              "p95_ms": 1200.0,
+              "p99_ms": 1500.0
+            },
+            "attack": {
+              "requests": 311,
+              "failures": 0,
+              "rps": 7.932083778971204,
+              "p50_ms": 100.0,
+              "p95_ms": 450.0,
+              "p99_ms": 1300.0
+            }
+          }
+        }
+      ],
+      "seconds_per_step": 40,
+      "think_time_s": [
+        0.5,
+        1.5
+      ],
+      "gateway": {
+        "status": "ok",
+        "product": "Bulwark",
+        "upstream": "mock",
+        "model": "mock-haiku",
+        "guards": {
+          "rules": true,
+          "classifier": true,
+          "pii": true
+        }
+      },
+      "machine": "Windows AMD64, load generator on the same machine",
+      "timestamp": "2026-11-08T23:22:50Z"
+    }
+  },
+  "sweep": {
+    "note": "30 s per level. w = GUARD_WORKERS (concurrent guard calls), t = CLASSIFIER_THREADS (ONNX threads per call). 'w=1/2/4' rows used t=0 (all cores). Shipped default on 12 cores: w=3, t=4.",
+    "w=1": {
+      "users": [
+        16,
+        32,
+        64
+      ],
+      "rps": [
+        13.0,
+        21.5,
+        21.5
+      ],
+      "p95_ms": [
+        530.0,
+        870.0,
+        2900.0
+      ]
+    },
+    "w=2": {
+      "users": [
+        16,
+        32,
+        64
+      ],
+      "rps": [
+        13.0,
+        22.4,
+        23.6
+      ],
+      "p95_ms": [
+        500.0,
+        800.0,
+        2500.0
+      ]
+    },
+    "w=4": {
+      "users": [
+        16,
+        32,
+        64
+      ],
+      "rps": [
+        13.1,
+        23.1,
+        26.0
+      ],
+      "p95_ms": [
+        420.0,
+        720.0,
+        2000.0
+      ]
+    },
+    "w=3 t=4": {
+      "users": [
+        32,
+        64
+      ],
+      "rps": [
+        25.8,
+        36.5
+      ],
+      "p95_ms": [
+        420.0,
+        1200.0
+      ]
+    },
+    "w=4 t=2": {
+      "users": [
+        32,
+        64
+      ],
+      "rps": [
+        25.4,
+        34.3
+      ],
+      "p95_ms": [
+        440.0,
+        1400.0
+      ]
+    },
+    "w=6 t=2": {
+      "users": [
+        32,
+        64
+      ],
+      "rps": [
+        23.6,
+        23.8
+      ],
+      "p95_ms": [
+        890.0,
+        2400.0
+      ]
+    },
+    "w=12 t=1": {
+      "users": [
+        32,
+        64
+      ],
+      "rps": [
+        22.0,
+        20.5
+      ],
+      "p95_ms": [
+        1200.0,
+        3200.0
+      ]
+    },
+    "w=2 t=6": {
+      "users": [
+        32,
+        64
+      ],
+      "rps": [
+        24.4,
+        31.7
+      ],
+      "p95_ms": [
+        560.0,
+        1500.0
+      ]
+    }
+  }
+}

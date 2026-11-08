@@ -22,7 +22,7 @@ The eval shows rules add very little recall on top of the classifier (v1: 83.9% 
 - **Recommendation:** list these as limitations in the README; they're honest and make the project more credible. A stretch fix is the LLM-as-judge layer for borderline scores (Section 9).
 
 ## 5. Is p95 latency good enough, or worth a speed pass?
-Guards add **39 ms at p50** but **329 ms at p95** on benign prompts, because the DeBERTa classifier's cost grows steeply with prompt length (~490 ms at 400 tokens on this laptop). Thread tuning made no difference.
+Guards add **37 ms at p50** but **316 ms at p95** on benign prompts, because the DeBERTa classifier's cost grows steeply with prompt length (~490 ms at 400 tokens on this laptop). Thread tuning doesn't change single-request latency (4 threads = all cores), though it did double throughput under load (see the load test).
 - **Recommendation:** present p50 + p95 honestly (the chart already does). If you want a better p95 story, the cheapest next step is trying ONNX Runtime's transformer optimizer or a smaller distilled model, re-running `make eval` to confirm accuracy holds (the int8 lesson).
 - **Meanwhile:** nothing changed; numbers are what they are.
 

@@ -99,3 +99,22 @@ def get_settings() -> Settings:
         jaeger_url=os.getenv("PUBLIC_JAEGER_URL", "http://localhost:16686"),
         grafana_url=os.getenv("PUBLIC_GRAFANA_URL", "http://localhost:3000"),
     )
+
+
+def classifier_threads() -> int:
+    """ONNX threads per classifier call: CLASSIFIER_THREADS, else min(4, cores).
+
+    4 threads match all-cores latency on short and long prompts and leave the other cores
+    for concurrent calls (scripts/load_test.py: 2x throughput vs one all-cores call at a time).
+    """
+    return int(os.getenv("CLASSIFIER_THREADS", "0")) or min(4, os.cpu_count() or 1)
+
+
+def guard_workers() -> int:
+    """Concurrent CPU-bound guard calls: GUARD_WORKERS, else cores // classifier threads.
+
+    Workers x threads ~= cores; going past that only adds contention (load-test sweep).
+    """
+    return int(os.getenv("GUARD_WORKERS", "0")) or max(
+        1, (os.cpu_count() or 1) // classifier_threads()
+    )

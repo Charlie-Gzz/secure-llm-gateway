@@ -67,3 +67,39 @@ def test_pii_in_model_answer_redacted(client):
 def test_latency_breakdown_present(client):
     gw = chat(client, "Hello there")["gateway"]
     assert gw["latency_ms"]["total"] >= gw["latency_ms"]["guards"] >= 0
+
+
+async def test_cpu_guards_run_off_the_event_loop():
+    """The classifier and PII calls run in the guard pool, so a slow guard can't stall the
+    event loop (the load test found this cut throughput in half). Rules stay inline."""
+    import threading
+    from pathlib import Path
+
+    from gateway.config import Policy
+    from gateway.guards.base import GuardResult
+    from gateway.pipeline import Pipeline
+    from gateway.schemas import ChatMessage, ChatRequest
+    from gateway.upstreams.mock import MockUpstream
+
+    seen: dict[str, str] = {}
+
+    class Spy:
+        def __init__(self, name):
+            self.name = name
+
+        def check(self, text):
+            seen[self.name] = threading.current_thread().name
+            return GuardResult(status="pass", score=0.0)
+
+        def redact(self, text, entities, min_score):
+            seen["pii"] = threading.current_thread().name
+            return text, []
+
+    policy = Policy.load(Path(__file__).resolve().parent.parent / "policy.yaml")
+    pipe = Pipeline(policy, MockUpstream(0), Spy("rules"), Spy("classifier"), Spy("pii"))
+    req = ChatRequest(messages=[ChatMessage(role="user", content="What is the capital of France?")])
+    _, info = await pipe.run(req)
+    assert info.verdict == "allowed"
+    assert seen["rules"] == threading.current_thread().name  # inline: cheaper than a hop
+    assert seen["classifier"].startswith("guard")
+    assert seen["pii"].startswith("guard")

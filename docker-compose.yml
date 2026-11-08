@@ -14,6 +14,9 @@ services:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       DB_PATH: /data/gateway.db
+      # Guard concurrency; 0 = auto-size from CPU count (gateway/config.py, docs/DECISIONS.md)
+      GUARD_WORKERS: ${GUARD_WORKERS:-0}
+      CLASSIFIER_THREADS: ${CLASSIFIER_THREADS:-0}
     volumes:
       - gateway-data:/data
     depends_on: [otel-collector]

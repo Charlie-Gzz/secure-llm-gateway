@@ -10,7 +10,7 @@
 - [x] M6: visual assets + portfolio kit
 - [x] M7: README + handoff
 - [x] Stretch 1: playground GIF
-- [ ] Stretch 2: Locust load test
+- [x] Stretch 2: Locust load test
 - [ ] Stretch 3: streaming
 - [ ] Stretch 4: LLM-as-judge
 
@@ -25,7 +25,9 @@
 - **M6** — `make assets`: 5 charts (PNG 1600px + SVG, CVD-validated palette) + Plotly page, architecture diagram (SVG w/ embedded fonts + PNG), 9 Playwright screenshots (playground ×7, Grafana, Jaeger). DEMO_SCRIPT, SLIDES_OUTLINE, PORTFOLIO_CARD written. deploy/ (Cloud Run + Fly) with in-app rate/size/spend limits. CI workflow.
 - **M7** — README (GIF hero, quickstart, how it works, results, limitations), LICENSE, `eval/cost_check.py`. Fresh clone from GitHub → `docker compose up` → healthy, traffic flows to Prometheus/Jaeger/Grafana. HANDOFF written. CI green (57 tests incl. ML).
 - **Stretch 1** — `scripts/record_gif.py` → `assets/playground.gif` (2.8 MB).
+- **Docs** — Mock upstream presented as a deliberate choice (Charlie: learning/showcase project, no API key needed).
+- **Stretch 2** — `make loadtest` (Locust, 1–64 users). Found that the CPU-bound guards blocked the event loop: capacity flattened at 18.7 req/s. Moved classifier + Presidio to a thread pool sized by a sweep (3 workers × 4 ONNX threads on 12 cores): 35.9 req/s, p95 at 32 users 1.1 s → 0.48 s. Re-ran `make eval`: accuracy identical, latency 37 ms p50 / 316 ms p95. Chart `assets/charts/load_test.png`. 58 tests.
 
 ## Next
-- Stretch 2: Locust load test (throughput + latency chart) against the mock upstream.
-- Then streaming, then LLM-as-judge for borderline classifier scores.
+- Stretch 3: streaming (`stream: true`, SSE) with output PII redaction still applied.
+- Then stretch 4: LLM-as-judge for borderline classifier scores.

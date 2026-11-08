@@ -18,7 +18,7 @@
 | **Catches 84% of prompt-injection attacks** | across ~3,000 public and hand-written prompts |
 | **0.4% false positives** | on 1,400 benign prompts |
 | **93% recall on unseen attacks** | 30 hand-written attacks not in any dataset |
-| **+39 ms median latency** | all guards on CPU (329 ms p95 for long prompts) |
+| **+37 ms median latency** | all guards on CPU (316 ms p95 for long prompts) |
 
 Point any OpenAI-compatible client at Bulwark by changing one line:
 
@@ -84,8 +84,14 @@ Every response carries a `gateway` field and an `X-Gateway-Verdict` header. They
 </p>
 
 - **Datasets:** `deepset/prompt-injections`, `Lakera/gandalf_ignore_instructions`, `TrustAIRLab/in-the-wild-jailbreak-prompts`, and `HuggingFaceH4/no_robots` (benign). None of them is in the classifier's training data. There's also a hand-written holdout of 30 attacks and 30 near-miss benign prompts ([eval/holdout.jsonl](eval/holdout.jsonl)).
-- **Cost per 1K requests:** about $0.17 of Claude Haiku spend. The guards add $0.004 of CPU time, and blocking attacks saves about $0.03. These are estimates from token counts and list prices (assumptions in the report). Anyone with a key can check them with `make eval-cost` (at most 100 real requests).
+- **Cost per 1K requests:** about $0.17 of Claude Haiku spend. The guards add $0.003 of CPU time, and blocking attacks saves about $0.03. These are estimates from token counts and list prices (assumptions in the report). Anyone with a key can check them with `make eval-cost` (at most 100 real requests).
 - **What the ablation shows:** the classifier does the heavy lifting. Rules add little recall on top, but they're explainable and skip the classifier for obvious attacks.
+
+### Under load
+
+`make loadtest` runs Locust against the gateway (mock LLM, same traffic mix, 1 to 64 concurrent chat users). The first run found a real bug: the classifier and Presidio ran on the async event loop, so every request waited behind every other request's guards. Throughput flattened at 19 req/s and p95 reached 3.6 s. Moving the CPU-bound guards to a small thread pool, sized by a sweep (4 ONNX threads per call × 3 concurrent calls on 12 cores), **nearly doubled capacity to 36 req/s** and cut p95 at 32 users from 1.1 s to 0.48 s. Single-request latency is unchanged. Details are in [docs/DECISIONS.md](docs/DECISIONS.md).
+
+<p align="center"><img src="assets/charts/load_test.png" alt="Load test: throughput and p95 latency vs concurrent users, before and after moving guards off the event loop" width="100%"></p>
 
 [Interactive charts](assets/charts/index.html) · [Demo script](docs/DEMO_SCRIPT.md) · [Design decisions](docs/DECISIONS.md)
 
@@ -109,10 +115,11 @@ make run       # gateway on :8000 (mock upstream by default)
 make test      # pytest, offline
 make lint      # ruff
 make eval      # regenerate eval/results
+make loadtest  # Locust load test against a running gateway (mock upstream only)
 make assets    # charts, diagram, screenshots (needs the stack running)
 ```
 
-The stack is Python 3.12, FastAPI, ONNX Runtime, Presidio, spaCy, OpenTelemetry, Jaeger, Prometheus, Grafana, SQLite, Tailwind, matplotlib, Plotly, and Playwright.
+The stack is Python 3.12, FastAPI, ONNX Runtime, Presidio, spaCy, OpenTelemetry, Jaeger, Prometheus, Grafana, SQLite, Tailwind, matplotlib, Plotly, Playwright, and Locust.
 
 Deployment configs for Cloud Run and Fly.io are in [deploy/](deploy/), with a rate limit, a prompt-size cap, and a daily spend cap. They are prepared but not deployed.
 

@@ -6,14 +6,18 @@ and Jaeger can all see what happened, how long it took, and which layer made the
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
+import functools
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
 from gateway import telemetry
-from gateway.config import Policy
+from gateway.config import Policy, guard_workers
 from gateway.cost import cost_usd
 from gateway.schemas import ChatRequest, GatewayInfo, Step, Usage
 from gateway.upstreams import Upstream
@@ -55,6 +59,15 @@ class Pipeline:
         self.rules = rules
         self.classifier = classifier
         self.pii = pii
+        # CPU-bound guards (classifier, Presidio) run in a small thread pool so they don't block
+        # the event loop while other requests wait on the upstream. Sizing: config.guard_workers.
+        self._pool = ThreadPoolExecutor(guard_workers(), thread_name_prefix="guard")
+
+    async def _offload(self, fn, *args):
+        """Run a CPU-bound guard call in the guard pool (keeps contextvars, e.g. the trace)."""
+        ctx = contextvars.copy_context()
+        call = functools.partial(ctx.run, fn, *args)
+        return await asyncio.get_running_loop().run_in_executor(self._pool, call)
 
     async def run(self, req: ChatRequest) -> tuple[dict[str, Any], GatewayInfo]:
         run = Run(request_id=f"req_{uuid.uuid4().hex[:16]}", started=time.perf_counter())
@@ -76,7 +89,11 @@ class Pipeline:
             if guard is None or not cfg.enabled:
                 continue
             with self._step(run, name) as rec:
-                result = guard.check(untrusted)
+                # Rules take ~0.1 ms: a thread hop would cost more than it saves.
+                if name == "rules":
+                    result = guard.check(untrusted)
+                else:
+                    result = await self._offload(guard.check, untrusted)
                 blocking = result.status == "block" and cfg.action == "block"
                 rec.status = "block" if blocking else "pass"
                 rec.detail = {**result.detail, "reason": result.reason}
@@ -93,7 +110,9 @@ class Pipeline:
                 found: list[dict] = []
                 for m in messages:
                     if m.role in UNTRUSTED_ROLES and m.text():
-                        clean, hits = self.pii.redact(m.text(), cfg.entities, cfg.min_score)
+                        clean, hits = await self._offload(
+                            self.pii.redact, m.text(), cfg.entities, cfg.min_score
+                        )
                         if hits:
                             m.content, found = clean, found + hits
                 if found:
@@ -119,7 +138,9 @@ class Pipeline:
         if self.pii and guards.pii_output.enabled:
             cfg = guards.pii_output
             with self._step(run, "pii_output") as rec:
-                answer, hits = self.pii.redact(answer, cfg.entities, cfg.min_score)
+                answer, hits = await self._offload(
+                    self.pii.redact, answer, cfg.entities, cfg.min_score
+                )
                 rec.status = "redact" if hits else "pass"
                 rec.detail = {"entities": run.redacted("output", hits)}
 

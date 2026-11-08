@@ -14,6 +14,7 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 
+from gateway.config import classifier_threads
 from gateway.guards.base import GuardResult
 
 
@@ -27,7 +28,7 @@ class ClassifierGuard:
 
         opts = ort.SessionOptions()
         opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        opts.intra_op_num_threads = 0  # let ORT use all physical cores
+        opts.intra_op_num_threads = classifier_threads()  # see config.classifier_threads
         self.session = ort.InferenceSession(
             str(onnx_file), opts, providers=["CPUExecutionProvider"]
         )

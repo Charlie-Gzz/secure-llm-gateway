@@ -1,8 +1,8 @@
 # Bulwark evaluation results
 
-_Generated 2026-11-08 17:07 UTC on Windows AMD64, Python 3.12.16. Regenerate with `make eval`._
+_Generated 2026-11-08 23:30 UTC on Windows AMD64, Python 3.12.16. Regenerate with `make eval`._
 
-**Catches 84.3% of prompt-injection attacks with 0.4% false positives, adding 329 ms p95 latency.**
+**Catches 84.3% of prompt-injection attacks with 0.4% false positives, adding 316 ms p95 latency.**
 
 ## Ablation (all public sets)
 
@@ -40,15 +40,15 @@ long jailbreaks (up to 8K characters) that need several 512-token classifier win
 
 | Layer | p50 benign | p95 benign | p50 all | p95 all |
 |---|---:|---:|---:|---:|
-| rules | 0.08 | 1.01 | 0.07 | 1.40 |
-| classifier | 32.14 | 283.55 | 29.02 | 622.11 |
-| pii | 7.13 | 43.14 | 6.58 | 63.17 |
-| total guards | 39.25 | 329.27 | 35.67 | 688.09 |
+| rules | 0.08 | 0.90 | 0.07 | 1.28 |
+| classifier | 30.40 | 276.42 | 27.26 | 560.33 |
+| pii | 6.74 | 38.14 | 5.99 | 54.77 |
+| total guards | 37.04 | 315.70 | 33.30 | 613.62 |
 
 ## Cost per 1K requests
 
 - Upstream LLM (claude-haiku-5-5): **$0.1723** (avg 223.2 input + 300 output tokens)
-- Guard compute (CPU): **$0.0035**
+- Guard compute (CPU): **$0.0032**
 - Saved by blocking attacks before the LLM (20% attack mix): **$0.0291**
 
 ## Classifier threshold sweep

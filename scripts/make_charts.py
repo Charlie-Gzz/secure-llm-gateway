@@ -23,6 +23,7 @@ from plotly.subplots import make_subplots  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "eval" / "results" / "results.json"
+LOAD_TEST = ROOT / "eval" / "results" / "load_test.json"
 OUT = ROOT / "assets" / "charts"
 
 BG, PANEL, LINE, INK, MUTED = "#0B0F17", "#131A26", "#1F2937", "#E5E7EB", "#9CA3AF"
@@ -311,6 +312,84 @@ def recall_by_source(res: dict) -> None:
 # -- interactive page ---------------------------------------------------------------
 
 
+def load_test() -> None:
+    """Throughput and p95 latency vs concurrent users, before vs after (scripts/load_test.py)."""
+    if not LOAD_TEST.exists():
+        print("  load_test skipped (run scripts/load_test.py first)")
+        return
+    runs = {k: v for k, v in json.loads(LOAD_TEST.read_text())["runs"].items()}
+    if not runs:
+        return
+    colors = [ORANGE, CYAN, VIOLET]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 5.6))
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.72, bottom=0.2, wspace=0.25)
+    for (label, run), color in zip(runs.items(), colors, strict=False):
+        steps = run["steps"]
+        users = [s["users"] for s in steps]
+        a1.plot(users, [s["rps"] for s in steps], color=color, lw=2, marker="o", ms=7, label=label)
+        a2.plot(users, [s["p95_ms"] for s in steps], color=color, lw=2, marker="o", ms=7)
+        a1.annotate(
+            f"{steps[-1]['rps']:.0f}",
+            (users[-1], steps[-1]["rps"]),
+            xytext=(6, -4),
+            textcoords="offset points",
+            color=INK,
+            fontsize=12,
+            fontweight="semibold",
+        )
+        a2.annotate(
+            f"{steps[-1]['p95_ms'] / 1000:.1f} s",
+            (users[-1], steps[-1]["p95_ms"]),
+            xytext=(-8, 8),
+            textcoords="offset points",
+            ha="right",
+            color=INK,
+            fontsize=12,
+            fontweight="semibold",
+        )
+    # What throughput would be with no queueing: users / (think time + unloaded response time).
+    first = next(iter(runs.values()))
+    think = sum(first["think_time_s"]) / 2
+    unloaded = first["steps"][0]["p50_ms"] / 1000
+    users = [s["users"] for s in first["steps"]]
+    a1.plot(
+        users,
+        [u / (think + unloaded) for u in users],
+        color=MUTED,
+        lw=1,
+        ls=":",
+        label="no queueing (ideal)",
+    )
+    for ax in (a1, a2):
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(users, [str(u) for u in users])
+        ax.minorticks_off()
+        ax.set_xlabel("concurrent chat users")
+        ax.grid(axis="x", visible=False)
+    a1.set_ylim(0, max(u / (think + unloaded) for u in users) * 1.08)
+    a1.set_title("Throughput (requests/s)", loc="left", fontsize=14, pad=12)
+    a2.set_ylim(0, None)
+    a2.yaxis.set_major_formatter(lambda v, _: f"{v / 1000:.1f} s" if v >= 1000 else f"{v:.0f} ms")
+    a2.set_title("p95 response time", loc="left", fontsize=14, pad=12)
+    fig.legend(loc="lower center", ncol=3, bbox_to_anchor=(0.5, 0.0))
+    peak = {k: max(s["rps"] for s in r["steps"]) for k, r in runs.items()}
+    names = list(peak)
+    if len(names) > 1 and peak[names[-1]] > peak[names[0]] * 1.1:
+        headline = (
+            f"Moving guards off the event loop lifts capacity "
+            f"from {peak[names[0]]:.0f} to {peak[names[-1]]:.0f} req/s"
+        )
+    else:
+        headline = f"One gateway process handles ~{max(peak.values()):.0f} req/s with all guards on"
+    title(
+        fig,
+        headline,
+        f"Locust, closed loop, {think:.0f} s think time · mock LLM "
+        f"(~{unloaded * 1000:.0f} ms) · 68% benign / 12% PII / 20% attacks · laptop CPU",
+    )
+    save(fig, "load_test")
+
+
 def plotly_page(res: dict) -> None:
     layout = dict(
         template="plotly_dark",
@@ -456,6 +535,7 @@ def main() -> None:
     print(f"Rendering charts to {OUT} (font: {family})")
     for chart in (ablation, latency, precision_recall, cost, recall_by_source):
         chart(res)
+    load_test()
     plotly_page(res)
 
 
