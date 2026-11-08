@@ -46,9 +46,12 @@ RULES: list[Rule] = [
     _r(
         "prompt_leak",
         "Tries to extract the system prompt or hidden instructions",
+        # Either an unambiguous target ("system prompt") or one addressed to the model
+        # ("your initial instructions"); "the original instructions" alone is too common.
         r"\b(reveal|show|print|repeat|output|display|tell me|give me|leak|dump|"
         r"what (is|are|was|were))\b(\s+\w+){0,4}?\s+"
-        r"(system|hidden|secret|initial|original|developer)\s+(prompt|instructions?|message|rules)",
+        r"((system|hidden|secret|developer)\s+(prompt|instructions?|message)|"
+        r"your\s+(\w+\s+)?(initial|original|first|real)\s+(prompt|instructions?|rules))",
     ),
     _r(
         "repeat_above",
@@ -60,7 +63,10 @@ RULES: list[Rule] = [
         "dan_persona",
         "Known jailbreak personas (DAN, STAN, developer mode, etc.)",
         r"\b(DAN|STAN|DUDE|AIM)\b.{0,40}\b(mode|anything now|jailbreak|persona)|"
-        r"\bdo anything now\b|\b(developer|god|jailbreak|unrestricted|unfiltered|evil)\s+mode\b",
+        r"\bdo anything now\b|\b(jailbreak|unrestricted|unfiltered|uncensored|evil)\s+mode\b|"
+        # "developer mode" is also a phone setting: only flag it with an escape intent nearby.
+        r"\b(developer|god)\s+mode\b.{0,60}\b(ignore|no (rules|restrictions|filters)|"
+        r"without (restrictions|filters)|unrestricted|bypass|enabled\W+you)",
     ),
     _r(
         "no_restrictions",
@@ -86,7 +92,7 @@ RULES: list[Rule] = [
         "admin_override",
         "Fake authority / override tokens",
         r"\b(admin|administrator|root|sudo|developer|maintenance)\s+(override|mode|access|command)"
-        r"\b.{0,30}\b(enabled|activated|granted|on)\b|\bBEGIN\s+(ADMIN|SYSTEM|OVERRIDE)\b",
+        r"\b.{0,30}\b(enabled|activated|granted)\b|\bBEGIN\s+(ADMIN|SYSTEM|OVERRIDE)\b",
     ),
 ]
 

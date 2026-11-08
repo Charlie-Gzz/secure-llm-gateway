@@ -5,7 +5,7 @@
 - [x] M1: skeleton + pass-through proxy
 - [x] M2: guards + policy
 - [x] M3: observability
-- [ ] M4: evaluation
+- [x] M4: evaluation
 - [ ] M5: playground UI
 - [ ] M6: visual assets + portfolio kit
 - [ ] M7: README + handoff
@@ -16,6 +16,7 @@
 - **M1** — FastAPI app with OpenAI-compatible `/v1/chat/completions`, mock + Anthropic (SDK) upstreams, cost from `policy.yaml` prices, SQLite request log, `/healthz`. 8 tests pass incl. OpenAI SDK drop-in against a live uvicorn server.
 - **M2** — Rules guard (9 regex families, Unicode normalization), ONNX classifier (protectai deberta-v3 v2, fp32, ~27 ms/prompt on CPU, windowed for long prompts), Presidio PII on input + output, policy.yaml wiring, graceful degrade if a guard can't load. int8 quantization tried and rejected (destroys accuracy). 51 tests pass.
 - **M3** — OTel spans per step under one trace (verified in Jaeger v2 via `/api/v3`), Prometheus metrics at `/metrics`, docker compose stack (gateway, collector, Jaeger, Prometheus, Grafana w/ anonymous viewer + provisioned dashboard), `scripts/traffic.py`. Verified: 200 requests → Prometheus counts match traffic, Jaeger has `gateway.request` + 5 step spans. Image slimmed 4.85→3.29 GB. 53 tests pass.
+- **M4** — `make eval`: 2,962 prompts (deepset, Gandalf, in-the-wild jailbreaks, no_robots, 60 hand-written holdout). Headline: catches 84.3% of attacks with 0.4% FPR, guards add 39 ms p50 / 329 ms p95 on benign prompts. Holdout recall 93.3%. Rules bugs found by the near-miss holdout fixed (v1 numbers kept in DECISIONS).
 
 ## Next
-- M4: finish eval run (datasets: deepset, gandalf, in-the-wild jailbreaks, no_robots + holdout), commit results.
+- M5 playground commit; M6 screenshots after gateway image rebuild; docs (PORTFOLIO_CARD).

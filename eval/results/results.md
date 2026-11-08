@@ -1,0 +1,76 @@
+# Bulwark evaluation results
+
+_Generated 2026-11-08 17:07 UTC on Windows AMD64, Python 3.12.16. Regenerate with `make eval`._
+
+**Catches 84.3% of prompt-injection attacks with 0.4% false positives, adding 329 ms p95 latency.**
+
+## Ablation (all public sets)
+
+| Config | Precision | Recall | F1 | FPR on benign |
+|---|---:|---:|---:|---:|
+| rules only | 100.0% | 36.7% | 53.7% | 0.0% |
+| classifier only | 99.5% | 83.9% | 91.1% | 0.4% |
+| rules + classifier | 99.5% | 84.3% | 91.3% | 0.4% |
+
+## Recall by attack source
+
+| Source | Attacks | Rules only | Classifier only | Rules + classifier |
+|---|---:|---:|---:|---:|
+| deepset | 263 | 6.1% | 39.2% | 40.3% |
+| gandalf | 1000 | 49.5% | 99.9% | 99.9% |
+| jailbreak_wild | 300 | 21.0% | 70.0% | 71.0% |
+| holdout | 30 | 0.0% | 93.3% | 93.3% |
+
+## False-positive rate by benign source
+
+| Source | Benign prompts | Rules only | Classifier only | Rules + classifier |
+|---|---:|---:|---:|---:|
+| deepset | 399 | 0.0% | 0.8% | 0.8% |
+| no_robots | 1000 | 0.0% | 0.3% | 0.3% |
+| holdout | 30 | 0.0% | 6.7% | 6.7% |
+
+## Generalization (holdout vs public)
+
+Hand-written holdout attacks not from any public set: recall **93.3%** vs **84.3%** on public sets (rules + classifier). Holdout benign FPR: 6.7%.
+
+## Latency per layer (ms, CPU)
+
+Benign prompts are what normal users send (the headline number). All prompts include
+long jailbreaks (up to 8K characters) that need several 512-token classifier windows.
+
+| Layer | p50 benign | p95 benign | p50 all | p95 all |
+|---|---:|---:|---:|---:|
+| rules | 0.08 | 1.01 | 0.07 | 1.40 |
+| classifier | 32.14 | 283.55 | 29.02 | 622.11 |
+| pii | 7.13 | 43.14 | 6.58 | 63.17 |
+| total guards | 39.25 | 329.27 | 35.67 | 688.09 |
+
+## Cost per 1K requests
+
+- Upstream LLM (claude-haiku-5-5): **$0.1723** (avg 223.2 input + 300 output tokens)
+- Guard compute (CPU): **$0.0035**
+- Saved by blocking attacks before the LLM (20% attack mix): **$0.0291**
+
+## Classifier threshold sweep
+
+| Threshold | Precision | Recall | FPR |
+|---:|---:|---:|---:|
+| 0.5 | 99.5% | 85.1% | 0.5% |
+| 0.7 | 99.5% | 84.8% | 0.5% |
+| 0.8 | 99.5% | 84.7% | 0.5% |
+| 0.9 | 99.5% | 84.3% | 0.4% |
+| 0.95 | 99.5% | 84.1% | 0.4% |
+| 0.98 | 99.8% | 83.5% | 0.2% |
+| 0.99 | 99.8% | 82.5% | 0.1% |
+| 0.995 | 99.9% | 81.6% | 0.1% |
+| 0.999 | 100.0% | 78.9% | 0.0% |
+
+## Datasets
+
+| Name | Hugging Face repo | License | Role |
+|---|---|---|---|
+| deepset | `deepset/prompt-injections` | Apache-2.0 | mixed injections + benign (some German) |
+| gandalf | `Lakera/gandalf_ignore_instructions` | MIT | real human injection attempts from the Gandalf game |
+| jailbreak_wild | `TrustAIRLab/in-the-wild-jailbreak-prompts` | MIT | jailbreak prompts collected from Reddit/Discord (sampled 300) |
+| no_robots | `HuggingFaceH4/no_robots` | CC-BY-NC-4.0 | human-written benign user requests (sampled 1,000) |
+| holdout | `eval/holdout*.jsonl` (hand-written) | MIT (this repo) | 30 attacks + 30 tricky benign prompts |
