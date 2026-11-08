@@ -147,4 +147,3 @@ async def test_upstream_failure_mid_stream_sends_error_event():
     events = [e async for e in pipe.stream(await pipe.prepare(req))]
     assert events[-1] == {"error": {"message": "upstream dropped", "type": "upstream_error"}}
     assert "[DONE]" not in events
-
