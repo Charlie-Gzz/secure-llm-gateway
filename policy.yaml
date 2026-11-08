@@ -32,7 +32,7 @@ guards:
   pii_input:
     enabled: true
     action: redact # redact | block
-    min_score: 0.5
+    min_score: 0.4
     entities:
       - US_SSN
       - CREDIT_CARD
@@ -41,12 +41,11 @@ guards:
       - IBAN_CODE
       - US_PASSPORT
       - IP_ADDRESS
-      - PERSON
 
   pii_output:
     enabled: true
     action: redact
-    min_score: 0.5
+    min_score: 0.4
     entities:
       - US_SSN
       - CREDIT_CARD

@@ -9,6 +9,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from gateway.config import PRODUCT_NAME, Policy, get_settings
+from gateway.guards.classifier import ClassifierGuard
+from gateway.guards.pii import PiiGuard
+from gateway.guards.rules import RulesGuard
 from gateway.pipeline import Pipeline
 from gateway.schemas import ChatRequest
 from gateway.store import RequestStore
@@ -18,7 +21,37 @@ log = logging.getLogger("bulwark")
 
 
 def build_pipeline(settings, policy: Policy) -> Pipeline:
-    return Pipeline(policy=policy, upstream=build_upstream(settings, policy))
+    """Load every guard once. A guard that fails to load is disabled, not fatal."""
+    rules = RulesGuard() if policy.guards.rules.enabled else None
+
+    classifier = None
+    if settings.classifier_enabled and policy.guards.classifier.enabled:
+        try:
+            cfg = policy.guards.classifier
+            classifier = ClassifierGuard(
+                settings.model_dir / "prompt-injection", cfg.threshold, cfg.max_length
+            )
+            classifier.score("warm up")  # first ONNX run allocates; keep it off the request path
+        except Exception as e:
+            log.warning("Classifier disabled (rules only): %s", e)
+
+    pii = None
+    if settings.pii_enabled and (
+        policy.guards.pii_input.enabled or policy.guards.pii_output.enabled
+    ):
+        try:
+            pii = PiiGuard()
+            pii.redact("warm up 555-0100", ["PHONE_NUMBER"], 0.4)
+        except Exception as e:
+            log.warning("PII guard disabled: %s", e)
+
+    return Pipeline(
+        policy=policy,
+        upstream=build_upstream(settings, policy),
+        rules=rules,
+        classifier=classifier,
+        pii=pii,
+    )
 
 
 @asynccontextmanager
@@ -45,6 +78,11 @@ async def healthz(request: Request):
         "product": PRODUCT_NAME,
         "upstream": pipeline.upstream.name,
         "model": pipeline.upstream.model,
+        "guards": {
+            "rules": pipeline.rules is not None,
+            "classifier": pipeline.classifier is not None,
+            "pii": pipeline.pii is not None,
+        },
     }
 
 

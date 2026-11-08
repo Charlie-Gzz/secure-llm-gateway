@@ -50,7 +50,7 @@ def test_streaming_rejected(client):
 
 
 def test_request_logged_to_sqlite(client, db_path):
-    body = chat(client, "Log me please")
+    body = chat(client, "What is a good name for a golden retriever?")
     rid = body["gateway"]["request_id"]
     row = (
         sqlite3.connect(db_path)
