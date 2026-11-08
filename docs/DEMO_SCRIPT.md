@@ -16,7 +16,7 @@
 | 6 | 1:06–1:14 | Click **PII in the answer**. PII·answer turns amber. | "The same check runs on the model's answer, so a response can't leak an email or phone number either." |
 | 7 | 1:14–1:30 | Click the **Trace** link → Jaeger trace opens. Expand `gateway.request`, show the step spans. | "Every request is one OpenTelemetry trace with a span per step, tagged with the verdict, scores, tokens, and cost." |
 | 8 | 1:30–1:44 | Grafana tab: the four stat tiles, then requests by verdict and blocks by reason. | "Prometheus and Grafana show the fleet view: request volume, block rate, p95 added latency, and spend." |
-| 9 | 1:44–1:56 | README results table / `assets/charts/ablation.png`. | "And it's measured: on about 2,900 public and hand-written prompts it catches 84% of attacks with 0.4% false positives, and 93% of hand-written attacks it had never seen." |
+| 9 | 1:44–1:56 | README results table / `assets/charts/ablation.png`. | "And it's measured: on about 3,000 public and hand-written prompts it catches 84% of attacks with 0.4% false positives, and 93% of hand-written attacks it had never seen." |
 | 10 | 1:56–2:00 | Terminal: `docker compose up`. Logo end card. | "One command to run it yourself. Link's below." |
 
 **Tips**

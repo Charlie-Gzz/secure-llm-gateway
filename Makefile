@@ -5,9 +5,8 @@ PORT ?= 8000
 
 .PHONY: setup run test lint fmt traffic eval eval-cost assets models up down
 
-setup:          ## Install deps, the spaCy model, and export the classifier to ONNX
+setup:          ## Install deps (incl. spaCy model) and download the ONNX classifier
 	uv sync
-	uv run python -m spacy download en_core_web_lg || uv run python -m spacy download en_core_web_sm
 	uv run python scripts/export_classifier.py
 
 run:            ## Run the gateway locally on :8000

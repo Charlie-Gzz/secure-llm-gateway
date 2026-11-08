@@ -4,7 +4,7 @@
 
 **One-line pitch:** A drop-in proxy that sits in front of LLM APIs, blocks prompt injection, redacts PII, and shows exactly what happened to every request, with a playground where visitors can try to break it.
 
-**Headline metric:** Catches **84%** of prompt-injection attacks with **0.4%** false positives on ~2,900 public and hand-written prompts, adding **39 ms** to a typical request (p50; 329 ms p95 on long prompts).
+**Headline metric:** Catches **84%** of prompt-injection attacks with **0.4%** false positives on ~3,000 public and hand-written prompts, adding **39 ms** to a typical request (p50; 329 ms p95 on long prompts).
 
 **Three bullets**
 - **Layered detection:** regex rules (~0.1 ms) → DeBERTa-v3 classifier on ONNX Runtime (CPU) → Presidio PII redaction on the prompt *and* the answer. Blocked requests never reach the model, so they cost nothing.
@@ -14,6 +14,6 @@
 **Tech tags:** Python · FastAPI · ONNX Runtime · DeBERTa-v3 · Microsoft Presidio · spaCy · OpenTelemetry · Jaeger · Prometheus · Grafana · Docker Compose · Claude API · Playwright · matplotlib · Plotly
 
 **Draft CV bullet**
-> Built Bulwark, an open-source LLM security gateway (FastAPI, ONNX Runtime, Presidio, OpenTelemetry) that blocks prompt injection and redacts PII in front of any OpenAI-compatible client; evaluated on ~2,900 prompts it catches 84% of attacks at a 0.4% false-positive rate (93% on a hand-written holdout) while adding 39 ms median latency on CPU, with per-request tracing and Grafana dashboards.
+> Built Bulwark, an open-source LLM security gateway (FastAPI, ONNX Runtime, Presidio, OpenTelemetry) that blocks prompt injection and redacts PII in front of any OpenAI-compatible client; evaluated on ~3,000 prompts it catches 84% of attacks at a 0.4% false-positive rate (93% on a hand-written holdout) while adding 39 ms median latency on CPU, with per-request tracing and Grafana dashboards.
 
 **Best visuals:** `assets/screenshots/playground-hero.png` (hero), `assets/charts/ablation.png`, `assets/diagram/architecture.png`, `assets/screenshots/grafana.png`.
