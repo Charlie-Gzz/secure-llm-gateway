@@ -1,6 +1,6 @@
 # Handoff
 
-Milestones M0–M7 are done, plus all four stretch items: the README GIF, the Locust load test, streaming, and the LLM judge. The private repo is
+Milestones M0–M7 are done, plus all four stretch items: the README GIF, the Locust load test, streaming, and the LLM judge. The public repo is
 https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 70 tests; the 2 real-judge tests skip in CI because the 3 GB judge isn't downloaded there).
 
 ## 1. What was built
@@ -47,7 +47,7 @@ Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make 
 - Docs: `docs/DEMO_SCRIPT.md`, `docs/SLIDES_OUTLINE.md`, `docs/PORTFOLIO_CARD.md`.
 
 ## 5. Questions on direction (details in QUESTIONS_FOR_CHARLIE.md)
-**All resolved on 2026-11-08:** Charlie accepted each recommendation below and kept the name Bulwark. The only step left is making the repo public, which is his call.
+**All resolved on 2026-11-08:** Charlie accepted each recommendation below and kept the name Bulwark. The repo is public, with a description and topics on GitHub.
 
 1. ~~**API key**~~ *Resolved:* the mock upstream stays the default on purpose (a learning and portfolio project, not a service). The README presents "runs offline, no key needed" as a feature.
 2. **Should the rules layer block or only observe?** It adds little recall but makes verdicts explainable and skips the classifier on obvious attacks. *Recommendation:* keep it blocking and tell the honest ablation story: "the classifier does the heavy lifting".

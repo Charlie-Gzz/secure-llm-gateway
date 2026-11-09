@@ -31,4 +31,4 @@
 - **Stretch 4** — LLM judge: Qwen3Guard-Gen-0.6B exported to ONNX (`make judge-model`, parity 3e-5); one forward pass reads P(unsafe) and P(Jailbreak). Escalate-only band [0.1, 0.9) fixed in advance. Eval: +0.5 pts recall (84.3 → 84.8%), 0 new FPs, 1% escalated, ~1 s per judged prompt; on all allowed traffic 86.9% (55% escalated); judge alone 26%. Key finding: 194/245 misses have classifier score < 0.01. Verified end to end in Docker (the judge blocks a 0.86-scored injection in 1.3 s). 72 tests (2 skip in CI).
 
 ## Next
-- All plan items done and all questions in QUESTIONS_FOR_CHARLIE.md resolved (recommendations accepted, name Bulwark kept). GitHub description set. Remaining: Charlie makes the repo public when ready.
+- All plan items done and all questions in QUESTIONS_FOR_CHARLIE.md resolved (recommendations accepted, name Bulwark kept). Repo made public by Charlie; GitHub description and 14 topics set. Nothing pending.
