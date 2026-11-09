@@ -2,6 +2,8 @@
 
 Each question includes my recommendation and what I did in the meantime.
 
+**Status (2026-11-08):** all questions resolved. Charlie accepted every recommendation below and confirmed the name "Bulwark". Making the repo public is his step to take when ready.
+
 ## 1. ~~API key~~ (resolved 2026-11-08)
 Charlie decided the project stays on the mock upstream by default: it's for learning and showcasing, not for offering as a service. The docs now present "runs offline, no key needed" as a feature. The Claude upstream remains implemented, and `make eval-cost` stays available as an optional check of the cost estimates.
 

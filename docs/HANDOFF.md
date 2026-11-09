@@ -47,6 +47,8 @@ Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make 
 - Docs: `docs/DEMO_SCRIPT.md`, `docs/SLIDES_OUTLINE.md`, `docs/PORTFOLIO_CARD.md`.
 
 ## 5. Questions on direction (details in QUESTIONS_FOR_CHARLIE.md)
+**All resolved on 2026-11-08:** Charlie accepted each recommendation below and kept the name Bulwark. The only step left is making the repo public, which is his call.
+
 1. ~~**API key**~~ *Resolved:* the mock upstream stays the default on purpose (a learning and portfolio project, not a service). The README presents "runs offline, no key needed" as a feature.
 2. **Should the rules layer block or only observe?** It adds little recall but makes verdicts explainable and skips the classifier on obvious attacks. *Recommendation:* keep it blocking and tell the honest ablation story: "the classifier does the heavy lifting".
 3. **Do a speed pass on p95 latency?** The classifier's cost grows steeply with prompt length, and thread tuning didn't help. *Recommendation:* present p50 and p95 as they are for now; if you want a better number, try ONNX Runtime's transformer optimizer or a distilled model, and re-run `make eval`.
