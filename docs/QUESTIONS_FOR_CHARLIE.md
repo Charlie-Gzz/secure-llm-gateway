@@ -26,7 +26,9 @@ Guards add **36 ms at p50** but **294 ms at p95** on benign prompts, because the
 - **Recommendation:** present p50 + p95 honestly (the chart already does). If you want a better p95 story, the cheapest next step is trying ONNX Runtime's transformer optimizer or a smaller distilled model, re-running `make eval` to confirm accuracy holds (the int8 lesson).
 - **Meanwhile:** nothing changed; numbers are what they are.
 
-## 6. Should the judge read more traffic?
+## 6. ~~Should the judge read more traffic?~~ (resolved 2026-11-08)
+**Decision (Charlie):** keep the recommended borderline-only setting. The README tells the "confidently wrong" story, and the options below stay documented for later.
+
 On borderline scores only (the setting I fixed before seeing results), the Qwen3Guard judge sees 1% of traffic and lifts recall 84.3% → 84.8%. Run on **every** prompt the classifier allows, it reaches **86.9% with no new false positives**, but then ~55% of requests wait ~1 s for it on CPU.
 - **Recommendation:** keep the borderline setting as the default and tell the story ("the classifier is confidently wrong, so uncertainty-based escalation has a ceiling"). If you want the +2.6 pts, the two cheap paths are (a) run the judge *in parallel* with the upstream call and drop the answer if it flags (latency hidden behind a real LLM's ~1–3 s; costs tokens on blocked requests), or (b) cache the judge's ~300-token policy prefix (KV cache) so each call only processes the user text, likely several times faster.
 - **Meanwhile:** setting `guards.judge.band: [0.0, 0.90]` in `policy.yaml` turns on the "all allowed traffic" mode today.

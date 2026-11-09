@@ -52,6 +52,7 @@ Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make 
 3. **Do a speed pass on p95 latency?** The classifier's cost grows steeply with prompt length, and thread tuning didn't help. *Recommendation:* present p50 and p95 as they are for now; if you want a better number, try ONNX Runtime's transformer optimizer or a distilled model, and re-run `make eval`.
 4. **How loudly to state the limitations?** These are English-only detection, some indirect injections, and role-play jailbreaks. *Recommendation:* keep the README's Limitations section; it builds credibility. The LLM-as-judge stretch item would address borderline cases.
 5. **Name and visibility.** I chose "Bulwark" but didn't check trademark or package-name conflicts. The repo stays private until you review it. *Recommendation:* do a quick name search, then make it public.
+6. ~~**Should the judge read more traffic?**~~ *Resolved:* keep it on borderline scores only (1% of traffic). Running it on all allowed traffic (+2.6 pts, ~1 s on 55% of requests) stays a one-line `policy.yaml` change.
 
 ## 6. Skipped or simplified, and why
 - **Mock upstream by design:** no real Claude call was made, by choice. The Anthropic upstream is implemented and unit-tested for message translation; `make eval-cost` is an optional check for anyone with a key.
