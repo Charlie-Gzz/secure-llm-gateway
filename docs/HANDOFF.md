@@ -1,7 +1,7 @@
 # Handoff
 
-Milestones M0–M7 are done, plus stretch items 1 (the README GIF), 2 (the Locust load test), and 3 (streaming). The private repo is
-https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 66 tests).
+Milestones M0–M7 are done, plus all four stretch items: the README GIF, the Locust load test, streaming, and the LLM judge. The private repo is
+https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 70 tests; the 2 real-judge tests skip in CI because the 3 GB judge isn't downloaded there).
 
 ## 1. What was built
 - **Bulwark**, an OpenAI-compatible gateway (`POST /v1/chat/completions`) in FastAPI. It has a Claude upstream (`claude-haiku-5-5` through the official SDK) and an offline mock upstream.
@@ -16,6 +16,7 @@ https://github.com/Charlie-Gzz/secure-llm-gateway, and CI is green (lint + 66 te
 - **Playground** at `/`: chat plus a request inspector with 6 one-click examples. Each example was verified to light up the intended pipeline.
 - **Portfolio kit:** charts, diagram, screenshots, a GIF, a demo script, a slides outline, and a portfolio card.
 - **Streaming** (`stream: true`), OpenAI-compatible. Input guards finish before the first byte; the answer is redacted a sentence at a time so PII split across chunks never leaks. The playground streams.
+- **LLM judge** (optional, `make judge-model`): Qwen3Guard-Gen-0.6B on CPU as a second opinion when the classifier is unsure. It adds 0.5 points of recall with no new false positives on 1% of traffic. The bigger lesson is that the classifier is confidently wrong on most misses, so a borderline-only judge can't reach them; run on all allowed traffic, it would add 2.6 points.
 - **Load test** (`make loadtest`): Locust from 1 to 64 users. It found that the guards blocked the async event loop; moving them to a sized thread pool took capacity from 19 to 36 req/s on a laptop, with single-request latency unchanged.
 - **Deploy configs** for Cloud Run and Fly.io, prepared but not deployed. They rely on in-app limits: rate limit, prompt-size cap, and daily spend cap.
 
@@ -34,7 +35,7 @@ Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make 
 - **93.3% recall on hand-written holdout attacks** that aren't in any dataset. The near-miss benign false-positive rate is 6.7%.
 - **Ablation:** rules alone get 36.7% recall at 0% FPR; the classifier alone gets 83.9%; the two together get 84.3%.
 - **Recall by source:** Gandalf 99.9%, in-the-wild jailbreaks 71%, deepset 40% (many misses are German or role-play prompts that deepset labels as injections).
-- **Latency on benign prompts:** guards add 37 ms at p50 and 316 ms at p95. Rules take 0.1 ms, PII 7 ms, and the classifier 30 ms at p50.
+- **Latency on benign prompts:** guards add 36 ms at p50 and 294 ms at p95. Rules take 0.1 ms, PII 7 ms, and the classifier 30 ms at p50.
 - **Cost per 1K requests:** about $0.17 of Haiku spend, $0.003 of guard CPU time, and about $0.03 saved by blocking attacks. These are computed from token estimates (the project runs on the mock upstream by design).
 
 ## 4. Visual assets (`assets/`)
@@ -58,7 +59,7 @@ Other targets: `make test`, `make lint`, `make eval`, `make loadtest` and `make 
 - **int8 quantization was rejected:** it destroyed accuracy. The fp32 model is served, and the lesson is logged.
 - **The rules were tuned once after seeing the holdout:** three real bugs, fixed with general patterns and regression tests. The v1 numbers are logged in DECISIONS.md, and the holdout is no longer fully blind for the rules layer.
 - **The fresh-clone test reused Docker's layer cache.** The layers matched by content, so the files are identical. The actual model download inside the Dockerfile was verified on the first, uncached build.
-- **Stretch item 4 isn't done yet:** the LLM-as-judge layer.
+- **The judge isn't in the Docker image** (3 GB). It's mounted from `models/judge` if you export it, and skipped otherwise.
 - **Streaming granularity is a sentence,** not a token, because each sentence is checked for PII before release.
 - **The load test runs on the same laptop as the gateway,** so Locust competes for CPU; absolute req/s numbers are machine-specific, the before/after comparison is the point.
 - **Not deployed anywhere,** as the plan requires. The configs in `deploy/` are ready for review.

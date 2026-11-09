@@ -8,6 +8,9 @@ import pytest
 # Offline, fast, isolated settings for every test run.
 os.environ["UPSTREAM"] = "mock"
 os.environ["MOCK_LATENCY_MS"] = "0"
+# The optional 3 GB judge stays off in app tests (CI never has it); tests/test_judge.py
+# covers it directly.
+os.environ["JUDGE_ENABLED"] = "0"
 
 
 @pytest.fixture(scope="session")

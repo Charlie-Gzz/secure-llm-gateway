@@ -1,8 +1,8 @@
 # Bulwark evaluation results
 
-_Generated 2026-11-08 23:30 UTC on Windows AMD64, Python 3.12.16. Regenerate with `make eval`._
+_Generated 2026-11-09 00:57 UTC on Windows AMD64, Python 3.12.16. Regenerate with `make eval`._
 
-**Catches 84.3% of prompt-injection attacks with 0.4% false positives, adding 316 ms p95 latency.**
+**Catches 84.3% of prompt-injection attacks with 0.4% false positives, adding 294 ms p95 latency.**
 
 ## Ablation (all public sets)
 
@@ -11,23 +11,43 @@ _Generated 2026-11-08 23:30 UTC on Windows AMD64, Python 3.12.16. Regenerate wit
 | rules only | 100.0% | 36.7% | 53.7% | 0.0% |
 | classifier only | 99.5% | 83.9% | 91.1% | 0.4% |
 | rules + classifier | 99.5% | 84.3% | 91.3% | 0.4% |
+| judge only | 100.0% | 26.4% | 41.8% | 0.0% |
+| rules + classifier + judge | 99.5% | 84.8% | 91.6% | 0.4% |
 
 ## Recall by attack source
 
-| Source | Attacks | Rules only | Classifier only | Rules + classifier |
-|---|---:|---:|---:|---:|
-| deepset | 263 | 6.1% | 39.2% | 40.3% |
-| gandalf | 1000 | 49.5% | 99.9% | 99.9% |
-| jailbreak_wild | 300 | 21.0% | 70.0% | 71.0% |
-| holdout | 30 | 0.0% | 93.3% | 93.3% |
+| Source | Attacks | Rules only | Classifier only | Rules + classifier | Judge only | Rules + classifier + judge |
+|---|---:|---:|---:|---:|---:|---:|
+| deepset | 263 | 6.1% | 39.2% | 40.3% | 7.2% | 40.7% |
+| gandalf | 1000 | 49.5% | 99.9% | 99.9% | 17.7% | 99.9% |
+| jailbreak_wild | 300 | 21.0% | 70.0% | 71.0% | 72.3% | 73.0% |
+| holdout | 30 | 0.0% | 93.3% | 93.3% | 26.7% | 93.3% |
 
 ## False-positive rate by benign source
 
-| Source | Benign prompts | Rules only | Classifier only | Rules + classifier |
-|---|---:|---:|---:|---:|
-| deepset | 399 | 0.0% | 0.8% | 0.8% |
-| no_robots | 1000 | 0.0% | 0.3% | 0.3% |
-| holdout | 30 | 0.0% | 6.7% | 6.7% |
+| Source | Benign prompts | Rules only | Classifier only | Rules + classifier | Judge only | Rules + classifier + judge |
+|---|---:|---:|---:|---:|---:|---:|
+| deepset | 399 | 0.0% | 0.8% | 0.8% | 0.0% | 0.8% |
+| no_robots | 1000 | 0.0% | 0.3% | 0.3% | 0.0% | 0.3% |
+| holdout | 30 | 0.0% | 6.7% | 6.7% | 0.0% | 6.7% |
+
+## Judge layer (optional, `make judge-model`)
+
+Qwen/Qwen3Guard-Gen-0.6B (ONNX, fp32, CPU). Runs only when the classifier score is in [0.1, 0.9) and rules + classifier didn't block; blocks when P(unsafe or controversial) x P(Jailbreak) >= 0.5.
+
+- Escalated: **1.0%** of all prompts, 0.2% of benign ones
+- Judge latency when it runs: p50 963 ms, p95 2723 ms (mean added per benign request: 8.6 ms)
+- New catches on public sets: **7** attacks; new false positives: **0**
+
+Sensitivity (the shipped setting is the first row; it was fixed before looking at these numbers):
+
+| Band | Judge rule | Recall | FPR | Holdout recall | Holdout FPR | Escalated |
+|---|---|---:|---:|---:|---:|---:|
+| [0.1, 0.9) | flagged x jailbreak | 84.8% | 0.4% | 93.3% | 6.7% | 1.0% |
+| [0.01, 0.9) | flagged x jailbreak | 85.2% | 0.4% | 93.3% | 6.7% | 2.1% |
+| [0.0, 0.9) | flagged x jailbreak | 86.9% | 0.4% | 93.3% | 6.7% | 55.2% |
+| [0.1, 0.9) | flagged | 85.2% | 0.5% | 96.7% | 6.7% | 1.0% |
+| [0.1, 0.9) | jailbreak | 85.0% | 0.4% | 96.7% | 6.7% | 1.0% |
 
 ## Generalization (holdout vs public)
 
@@ -40,10 +60,10 @@ long jailbreaks (up to 8K characters) that need several 512-token classifier win
 
 | Layer | p50 benign | p95 benign | p50 all | p95 all |
 |---|---:|---:|---:|---:|
-| rules | 0.08 | 0.90 | 0.07 | 1.28 |
-| classifier | 30.40 | 276.42 | 27.26 | 560.33 |
-| pii | 6.74 | 38.14 | 5.99 | 54.77 |
-| total guards | 37.04 | 315.70 | 33.30 | 613.62 |
+| rules | 0.08 | 0.89 | 0.07 | 1.28 |
+| classifier | 29.60 | 261.41 | 26.81 | 566.57 |
+| pii | 6.53 | 37.33 | 6.03 | 54.70 |
+| total guards | 36.28 | 294.22 | 32.82 | 626.10 |
 
 ## Cost per 1K requests
 

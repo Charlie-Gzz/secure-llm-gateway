@@ -18,7 +18,7 @@
 | **Catches 84% of prompt-injection attacks** | across ~3,000 public and hand-written prompts |
 | **0.4% false positives** | on 1,400 benign prompts |
 | **93% recall on unseen attacks** | 30 hand-written attacks not in any dataset |
-| **+37 ms median latency** | all guards on CPU (316 ms p95 for long prompts) |
+| **+36 ms median latency** | all guards on CPU (294 ms p95 for long prompts) |
 
 Point any OpenAI-compatible client at Bulwark by changing one line:
 
@@ -95,6 +95,19 @@ Every response carries a `gateway` field and an `X-Gateway-Verdict` header. They
 
 <p align="center"><img src="assets/charts/load_test.png" alt="Load test: throughput and p95 latency vs concurrent users, before and after moving guards off the event loop" width="100%"></p>
 
+### An LLM judge, measured
+
+Stretch goal: a second opinion from a small open-weights guard LLM, [Qwen3Guard-Gen-0.6B](https://huggingface.co/Qwen/Qwen3Guard-Gen-0.6B) (Apache-2.0), exported to ONNX and run on CPU ([gateway/guards/judge.py](gateway/guards/judge.py)). It doesn't generate text. One forward pass reads two answers at once: how likely the judge is to call the prompt unsafe, and how likely it is to file it under "Jailbreak".
+
+- **Where it runs:** only when the classifier's score is between 0.1 and 0.9 (unsure). That's 1% of traffic, at about 1 s per judged prompt.
+- **What it adds:** recall goes from 84.3% to 84.8%, with **no new false positives**.
+- **Why so little:** the classifier is rarely unsure. Of the 245 public attacks it misses, 194 score below 0.01. It's confidently wrong, so a "borderline" judge never sees them. Run on every prompt the classifier allows, the judge reaches 86.9% recall, still with no new false positives, but it then reads 55% of traffic.
+- **On its own,** the judge is weak (26% recall). It's useful as a precise second opinion, not as a replacement for the classifier.
+
+It's optional: `make judge-model` exports it (about 3 GB, not baked into the Docker image). Without it, the gateway skips the step. Every setting is in the [sensitivity table](eval/results/results.md#judge-layer-optional-make-judge-model).
+
+<p align="center"><img src="assets/charts/judge.png" alt="Judge chart: recall vs share of traffic sent to the judge" width="100%"></p>
+
 [Interactive charts](assets/charts/index.html) · [Demo script](docs/DEMO_SCRIPT.md) · [Design decisions](docs/DECISIONS.md)
 
 ## Limitations
@@ -117,7 +130,8 @@ make setup     # uv sync + download the ONNX classifier
 make run       # gateway on :8000 (mock upstream by default)
 make test      # pytest, offline
 make lint      # ruff
-make eval      # regenerate eval/results
+make eval      # regenerate eval/results (judge configs too, if the judge is exported)
+make judge-model  # optional: export the Qwen3Guard judge to models/judge (~3 GB)
 make loadtest  # Locust load test against a running gateway (mock upstream only)
 make assets    # charts, diagram, screenshots (needs the stack running)
 ```

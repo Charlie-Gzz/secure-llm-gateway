@@ -22,7 +22,11 @@ The eval shows rules add very little recall on top of the classifier (v1: 83.9% 
 - **Recommendation:** list these as limitations in the README; they're honest and make the project more credible. A stretch fix is the LLM-as-judge layer for borderline scores (Section 9).
 
 ## 5. Is p95 latency good enough, or worth a speed pass?
-Guards add **37 ms at p50** but **316 ms at p95** on benign prompts, because the DeBERTa classifier's cost grows steeply with prompt length (~490 ms at 400 tokens on this laptop). Thread tuning doesn't change single-request latency (4 threads = all cores), though it did double throughput under load (see the load test).
+Guards add **36 ms at p50** but **294 ms at p95** on benign prompts, because the DeBERTa classifier's cost grows steeply with prompt length (~490 ms at 400 tokens on this laptop). Thread tuning doesn't change single-request latency (4 threads = all cores), though it did double throughput under load (see the load test).
 - **Recommendation:** present p50 + p95 honestly (the chart already does). If you want a better p95 story, the cheapest next step is trying ONNX Runtime's transformer optimizer or a smaller distilled model, re-running `make eval` to confirm accuracy holds (the int8 lesson).
 - **Meanwhile:** nothing changed; numbers are what they are.
 
+## 6. Should the judge read more traffic?
+On borderline scores only (the setting I fixed before seeing results), the Qwen3Guard judge sees 1% of traffic and lifts recall 84.3% → 84.8%. Run on **every** prompt the classifier allows, it reaches **86.9% with no new false positives**, but then ~55% of requests wait ~1 s for it on CPU.
+- **Recommendation:** keep the borderline setting as the default and tell the story ("the classifier is confidently wrong, so uncertainty-based escalation has a ceiling"). If you want the +2.6 pts, the two cheap paths are (a) run the judge *in parallel* with the upstream call and drop the answer if it flags (latency hidden behind a real LLM's ~1–3 s; costs tokens on blocked requests), or (b) cache the judge's ~300-token policy prefix (KV cache) so each call only processes the user text, likely several times faster.
+- **Meanwhile:** setting `guards.judge.band: [0.0, 0.90]` in `policy.yaml` turns on the "all allowed traffic" mode today.

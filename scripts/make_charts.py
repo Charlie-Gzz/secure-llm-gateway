@@ -312,6 +312,63 @@ def recall_by_source(res: dict) -> None:
 # -- interactive page ---------------------------------------------------------------
 
 
+def judge(res: dict) -> None:
+    """Recall vs share of traffic the judge reads (product rule, FPR unchanged)."""
+    j = res.get("judge")
+    if not j:
+        print("  judge skipped (no judge results; run `make judge-model` + `make eval`)")
+        return
+    rows = [v for v in j["sensitivity"] if v["rule"] == "flagged x jailbreak"]
+    rows.sort(key=lambda v: v["escalated_share"])
+    base = res["configs"]["rules + classifier"]
+    xs = [v["escalated_share"] * 100 for v in rows]
+    ys = [v["recall"] * 100 for v in rows]
+    fig, ax = plt.subplots(figsize=(10, 5.6))
+    fig.subplots_adjust(left=0.09, right=0.95, top=0.74, bottom=0.14)
+    ax.axhline(base["recall"] * 100, color=MUTED, lw=1, ls="--")
+    ax.text(
+        xs[-1],
+        base["recall"] * 100 - 0.25,
+        f"without judge {pct(base['recall'])}",
+        color=MUTED,
+        fontsize=12,
+        ha="right",
+        va="top",
+    )
+    ax.plot(xs, ys, color=CYAN, lw=2, marker="o", ms=8)
+    # Alternate labels below/above so the two left-hand points don't collide.
+    offsets = [(14, -34), (16, 34), (-10, 10)]
+    for i, (x, y, v) in enumerate(zip(xs, ys, rows, strict=True)):
+        band = f"classifier scores {v['band'][0]:g} to {v['band'][1]:g}"
+        dx, dy = offsets[min(i, len(offsets) - 1)]
+        ax.annotate(
+            f"{pct(v['recall'])}  ·  FPR {pct(v['fpr'])}\n{band}",
+            (x, y),
+            xytext=(dx, dy),
+            textcoords="offset points",
+            ha="left" if dx > 0 else "right",
+            va="top" if dy < 0 else "bottom",
+            color=INK,
+            fontsize=12,
+        )
+    ax.set_xlabel("share of traffic sent to the judge (%)")
+    ax.set_ylabel("recall on public attacks (%)")
+    ax.set_xlim(-2, 62)
+    ax.set_ylim(base["recall"] * 100 - 2.2, max(ys) + 1.5)
+    ax.grid(axis="x", visible=False)
+    gain_small = ys[0] - base["recall"] * 100
+    gain_big = ys[-1] - base["recall"] * 100
+    same_fpr = all(abs(v["fpr"] - base["fpr"]) < 1e-9 for v in rows)
+    fp_note = "no new false positives" if same_fpr else "see FPR per point"
+    title(
+        fig,
+        f"Judge: +{gain_small:.1f} pts on borderline prompts, +{gain_big:.1f} on all allowed",
+        f"Qwen3Guard-0.6B as a second opinion · {fp_note} · "
+        f"~{j['latency_ms']['p50'] / 1000:.1f} s per judged prompt on CPU",
+    )
+    save(fig, "judge")
+
+
 def load_test() -> None:
     """Throughput and p95 latency vs concurrent users, before vs after (scripts/load_test.py)."""
     if not LOAD_TEST.exists():
@@ -533,7 +590,7 @@ def main() -> None:
     res = json.loads(RESULTS.read_text(encoding="utf-8"))
     family = setup_style()
     print(f"Rendering charts to {OUT} (font: {family})")
-    for chart in (ablation, latency, precision_recall, cost, recall_by_source):
+    for chart in (ablation, latency, precision_recall, cost, recall_by_source, judge):
         chart(res)
     load_test()
     plotly_page(res)

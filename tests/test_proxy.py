@@ -28,6 +28,7 @@ def test_chat_completion_shape(client):
     assert [s["name"] for s in gw["steps"]] == [
         "rules",
         "classifier",
+        "judge",
         "pii_input",
         "llm",
         "pii_output",

@@ -32,7 +32,7 @@ from gateway.streaming import SentenceBuffer, chunk, usage_chunk
 from gateway.upstreams import Upstream, UpstreamError
 from gateway.upstreams.base import UpstreamResult
 
-STEP_ORDER = ("rules", "classifier", "pii_input", "llm", "pii_output")
+STEP_ORDER = ("rules", "classifier", "judge", "pii_input", "llm", "pii_output")
 UNTRUSTED_ROLES = {"user", "tool"}  # end-user text; system/developer prompts are trusted
 
 
@@ -81,12 +81,15 @@ class Prepared:
 
 
 class Pipeline:
-    def __init__(self, policy: Policy, upstream: Upstream, rules=None, classifier=None, pii=None):
+    def __init__(
+        self, policy: Policy, upstream: Upstream, rules=None, classifier=None, pii=None, judge=None
+    ):
         self.policy = policy
         self.upstream = upstream
         self.rules = rules
         self.classifier = classifier
         self.pii = pii
+        self.judge = judge
         # CPU-bound guards (classifier, Presidio) run in a small thread pool so they don't block
         # the event loop while other requests wait on the upstream. Sizing: config.guard_workers.
         self._pool = ThreadPoolExecutor(guard_workers(), thread_name_prefix="guard")
@@ -194,6 +197,18 @@ class Pipeline:
                     rec.detail["score"] = round(result.score, 4)
             if blocking:
                 return messages, self._blocked(run, name, result.reason)
+
+        # 2b. Judge: a guard LLM for prompts the classifier was unsure about.
+        cfg, score = guards.judge, run.scores.get("classifier")
+        if self.judge and cfg.enabled and score is not None and cfg.band[0] <= score < cfg.band[1]:
+            with self._step(run, "judge") as rec:
+                result = await self._offload(self.judge.check, untrusted)
+                blocking = result.status == "block" and cfg.action == "block"
+                rec.status = "block" if blocking else "pass"
+                rec.detail = {**result.detail, "reason": result.reason, "score": result.score}
+                run.scores["judge"] = result.score
+            if blocking:
+                return messages, self._blocked(run, "judge", result.reason)
 
         # 3. PII on the prompt: redact in place before anything leaves the gateway.
         if self.pii and guards.pii_input.enabled:

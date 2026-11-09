@@ -3,7 +3,7 @@
 
 PORT ?= 8000
 
-.PHONY: setup run test lint fmt traffic loadtest eval eval-cost assets gif models up down
+.PHONY: setup run test lint fmt traffic loadtest eval eval-cost assets gif models judge-model up down
 
 setup:          ## Install deps (incl. spaCy model) and download the ONNX classifier
 	uv sync
@@ -45,6 +45,9 @@ gif:            ## Record the playground GIF for the README (needs the stack + f
 
 models:         ## Download + export the ONNX classifier
 	uv run python scripts/export_classifier.py
+
+judge-model:    ## Export the optional Qwen3Guard judge to ONNX (throwaway env; ~3 GB download)
+	uv run --no-project --with torch==2.14.1 --with transformers==5.20.2 --with onnx==1.23.2 --with onnxruntime==1.31.1 python scripts/export_judge.py
 
 up:             ## Start gateway + OTel Collector + Jaeger + Prometheus + Grafana
 	docker compose up -d --build

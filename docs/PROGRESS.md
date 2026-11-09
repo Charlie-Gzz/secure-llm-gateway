@@ -12,7 +12,7 @@
 - [x] Stretch 1: playground GIF
 - [x] Stretch 2: Locust load test
 - [x] Stretch 3: streaming
-- [ ] Stretch 4: LLM-as-judge
+- [x] Stretch 4: LLM-as-judge
 
 ## Log
 - **M0** — Installed uv 0.13.7 and Python 3.12.16. Docker Desktop was not running; started it. PyPI and Hugging Face reachable. No API key → `UPSTREAM=mock`. Private repo created.
@@ -28,6 +28,7 @@
 - **Docs** — Mock upstream presented as a deliberate choice (Charlie: learning/showcase project, no API key needed).
 - **Stretch 2** — `make loadtest` (Locust, 1–64 users). Found that the CPU-bound guards blocked the event loop: capacity flattened at 18.7 req/s. Moved classifier + Presidio to a thread pool sized by a sweep (3 workers × 4 ONNX threads on 12 cores): 35.9 req/s, p95 at 32 users 1.1 s → 0.48 s. Re-ran `make eval`: accuracy identical, latency 37 ms p50 / 316 ms p95. Chart `assets/charts/load_test.png`. 58 tests.
 - **Stretch 3** — Streaming (`stream: true`): OpenAI chunk format, works with the OpenAI SDK, `include_usage`, blocked prompts stream a `content_filter` finish, mid-stream errors become an error event. Output PII is redacted per sentence so entities split across chunks never leak (tested with 1–3 character chunks). Playground streams; inspector shows time to first token. Jaeger trace verified. 66 tests.
+- **Stretch 4** — LLM judge: Qwen3Guard-Gen-0.6B exported to ONNX (`make judge-model`, parity 3e-5); one forward pass reads P(unsafe) and P(Jailbreak). Escalate-only band [0.1, 0.9) fixed in advance. Eval: +0.5 pts recall (84.3 → 84.8%), 0 new FPs, 1% escalated, ~1 s per judged prompt; on all allowed traffic 86.9% (55% escalated); judge alone 26%. Key finding: 194/245 misses have classifier score < 0.01. Verified end to end in Docker (the judge blocks a 0.86-scored injection in 1.3 s). 72 tests (2 skip in CI).
 
 ## Next
-- Stretch 4: LLM-as-judge for borderline classifier scores, added to the ablation.
+- All plan items done. Open questions are in QUESTIONS_FOR_CHARLIE.md (newest: #6, whether the judge should read more traffic).

@@ -40,6 +40,13 @@ class ClassifierPolicy(GuardPolicy):
     max_length: int = 512
 
 
+class JudgePolicy(GuardPolicy):
+    # The judge runs only when the classifier's score falls in [band[0], band[1]): it can turn
+    # an uncertain "allow" into a block. Outside the band the classifier's decision stands.
+    band: tuple[float, float] = (0.1, 0.9)
+    threshold: float = 0.5
+
+
 class PiiPolicy(GuardPolicy):
     action: Action = "redact"
     min_score: float = 0.5
@@ -49,6 +56,7 @@ class PiiPolicy(GuardPolicy):
 class Guards(BaseModel):
     rules: GuardPolicy = GuardPolicy()
     classifier: ClassifierPolicy = ClassifierPolicy()
+    judge: JudgePolicy = JudgePolicy()
     pii_input: PiiPolicy = PiiPolicy()
     pii_output: PiiPolicy = PiiPolicy()
 
@@ -72,6 +80,7 @@ class Settings:
     db_path: Path
     mock_latency_ms: int
     classifier_enabled: bool
+    judge_enabled: bool
     pii_enabled: bool
     otel_endpoint: str | None
     model_dir: Path
@@ -93,6 +102,7 @@ def get_settings() -> Settings:
         db_path=Path(os.getenv("DB_PATH", ROOT / "data" / "gateway.db")),
         mock_latency_ms=int(os.getenv("MOCK_LATENCY_MS", "150")),
         classifier_enabled=_flag("CLASSIFIER_ENABLED", True),
+        judge_enabled=_flag("JUDGE_ENABLED", True),  # still needs `make judge-model`
         pii_enabled=_flag("PII_ENABLED", True),
         otel_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or None,
         model_dir=Path(os.getenv("MODEL_DIR", ROOT / "models")),

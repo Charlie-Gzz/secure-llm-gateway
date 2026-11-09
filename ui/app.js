@@ -17,6 +17,7 @@ const EXAMPLES = [
 const STEPS = [
   { name: "rules", label: "Rules", sub: "regex & heuristics" },
   { name: "classifier", label: "Classifier", sub: "DeBERTa-v3 · ONNX on CPU" },
+  { name: "judge", label: "Judge", sub: "Qwen3Guard · borderline scores only" },
   { name: "pii_input", label: "PII · prompt", sub: "Presidio redaction" },
   { name: "llm", label: "LLM", sub: "upstream model" },
   { name: "pii_output", label: "PII · answer", sub: "Presidio redaction" },
@@ -207,7 +208,9 @@ function renderSteps(byName, pending = false) {
 
 function stepDetail(name, step) {
   const d = step.detail || {};
+  if (step.status === "skip" && name === "judge") return "Only runs when the classifier is unsure";
   if (step.status === "skip") return "Not run (request already decided)";
+  if (name === "judge" && d.p_flagged !== undefined) return `Unsafe <span class="font-mono text-ink">${d.p_flagged.toFixed(2)}</span> · jailbreak <span class="font-mono text-ink">${d.p_jailbreak.toFixed(2)}</span>`;
   if (name === "rules") return d.matched?.length ? `Matched <span class="font-mono text-ink">${esc(d.matched.join(", "))}</span>` : "No known attack patterns";
   if (name === "classifier" && d.score !== undefined) return `Injection probability <span class="font-mono text-ink">${d.score.toFixed(3)}</span>`;
   if (name.startsWith("pii")) {

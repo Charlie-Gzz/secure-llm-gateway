@@ -29,6 +29,16 @@ guards:
     # Prompts are scored in overlapping windows of this many tokens (the model's max is 512).
     max_length: 512
 
+  # Optional second opinion for borderline prompts: Qwen3Guard-Gen-0.6B on CPU (~1 s).
+  # Needs `make judge-model`; without the model the gateway runs without it.
+  judge:
+    enabled: true
+    action: block
+    # Escalate only when the classifier's score is in [band[0], band[1]) (uncertain allows).
+    band: [0.10, 0.90]
+    # Judge score = P(unsafe or controversial) x P(category = Jailbreak); block at or above.
+    threshold: 0.50
+
   pii_input:
     enabled: true
     action: redact # redact | block

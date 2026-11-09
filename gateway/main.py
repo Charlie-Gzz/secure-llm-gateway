@@ -14,6 +14,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from gateway import telemetry
 from gateway.config import PRODUCT_NAME, ROOT, Policy, get_settings
 from gateway.guards.classifier import ClassifierGuard
+from gateway.guards.judge import JudgeGuard
 from gateway.guards.pii import PiiGuard
 from gateway.guards.rules import RulesGuard
 from gateway.limits import Limits, start_of_day_utc
@@ -41,6 +42,18 @@ def build_pipeline(settings, policy: Policy) -> Pipeline:
         except Exception as e:
             log.warning("Classifier disabled (rules only): %s", e)
 
+    judge = None
+    judge_dir = settings.model_dir / "judge"
+    if classifier and settings.judge_enabled and policy.guards.judge.enabled:
+        if (judge_dir / "model.onnx").exists():
+            try:
+                judge = JudgeGuard(judge_dir, policy.guards.judge.threshold)
+                judge.score("warm up")
+            except Exception as e:
+                log.warning("Judge disabled: %s", e)
+        else:
+            log.info("Judge not installed (optional; `make judge-model`)")
+
     pii = None
     if settings.pii_enabled and (
         policy.guards.pii_input.enabled or policy.guards.pii_output.enabled
@@ -57,6 +70,7 @@ def build_pipeline(settings, policy: Policy) -> Pipeline:
         rules=rules,
         classifier=classifier,
         pii=pii,
+        judge=judge,
     )
 
 
@@ -121,6 +135,7 @@ async def healthz(request: Request):
         "guards": {
             "rules": pipeline.rules is not None,
             "classifier": pipeline.classifier is not None,
+            "judge": pipeline.judge is not None,
             "pii": pipeline.pii is not None,
         },
     }

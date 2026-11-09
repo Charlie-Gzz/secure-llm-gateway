@@ -3,6 +3,8 @@
 Measures, for rules only / classifier only / rules + classifier:
   precision, recall, F1, false-positive rate on benign prompts, per-source recall,
   holdout vs public recall, latency p50/p95 per layer, and cost per 1K requests.
+If the optional judge is exported (`make judge-model`), also: judge only, and rules +
+classifier + judge on borderline scores (cached in eval/data/judge_cache.jsonl).
 
     uv run python eval/run_eval.py          (or: make eval)
 """
@@ -21,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from eval.datasets import SOURCES, load_all  # noqa: E402
+from eval.judge_scores import judge_scores, key  # noqa: E402
 from gateway.config import Policy  # noqa: E402
 from gateway.cost import cost_usd, estimate_tokens  # noqa: E402
 from gateway.guards.classifier import ClassifierGuard  # noqa: E402
@@ -81,11 +84,86 @@ def score_all(examples: list[dict], policy: Policy) -> list[dict]:
     return records
 
 
-def predictors(threshold: float) -> dict:
-    return {
+def predictors(threshold: float, judge=None) -> dict:
+    preds = {
         "rules only": lambda r: bool(r["rules"]),
         "classifier only": lambda r: r["score"] >= threshold,
         "rules + classifier": lambda r: bool(r["rules"]) or r["score"] >= threshold,
+    }
+    if judge is not None:  # policy.guards.judge, and records carry judge probabilities
+        preds["judge only"] = lambda r: judge_says(r, judge.threshold)
+        preds["rules + classifier + judge"] = lambda r: (
+            preds["rules + classifier"](r)
+            or (in_band(r, judge.band) and judge_says(r, judge.threshold))
+        )
+    return preds
+
+
+def in_band(r: dict, band) -> bool:
+    return band[0] <= r["score"] < band[1]
+
+
+def judge_says(r: dict, threshold: float, rule: str = "flagged x jailbreak") -> bool:
+    j = r["judge"]
+    value = {
+        "flagged x jailbreak": j["p_flagged"] * j["p_jailbreak"],
+        "flagged": j["p_flagged"],
+        "jailbreak": j["p_jailbreak"],
+    }[rule]
+    return value >= threshold
+
+
+def judge_report(public, holdout, records, threshold, jcfg) -> dict:
+    """What the judge adds: escalation rate, latency, catches, and a sensitivity table."""
+    base = predictors(threshold)["rules + classifier"]
+    escalated = [r for r in records if not base(r) and in_band(r, jcfg.band)]
+    benign_pub = [r for r in public if r["label"] == 0]
+    esc_benign = [r for r in benign_pub if not base(r) and in_band(r, jcfg.band)]
+    ms = [r["judge"]["ms"] for r in records]
+
+    def variant(band, rule):
+        def pred(r):
+            return base(r) or (in_band(r, band) and judge_says(r, jcfg.threshold, rule))
+
+        pub, hold = confusion(public, pred), confusion(holdout, pred)
+        return {
+            "band": list(band),
+            "rule": rule,
+            "recall": pub["recall"],
+            "fpr": pub["fpr"],
+            "holdout_recall": hold["recall"],
+            "holdout_fpr": hold["fpr"],
+            "escalated_share": sum(1 for r in records if not base(r) and in_band(r, band))
+            / len(records),
+        }
+
+    return {
+        "model": "Qwen/Qwen3Guard-Gen-0.6B (ONNX, fp32, CPU)",
+        "band": list(jcfg.band),
+        "threshold": jcfg.threshold,
+        "escalated_share_all": len(escalated) / len(records),
+        "escalated_share_benign": len(esc_benign) / len(benign_pub),
+        "latency_ms": {"p50": percentile(ms, 0.5), "p95": percentile(ms, 0.95)},
+        "mean_added_ms_benign": statistics.fmean(
+            r["judge"]["ms"] if (not base(r) and in_band(r, jcfg.band)) else 0.0 for r in benign_pub
+        ),
+        "new_catches_public": sum(
+            1
+            for r in escalated
+            if r["source"] != "holdout" and r["label"] == 1 and judge_says(r, jcfg.threshold)
+        ),
+        "new_false_positives_public": sum(
+            1
+            for r in escalated
+            if r["source"] != "holdout" and r["label"] == 0 and judge_says(r, jcfg.threshold)
+        ),
+        "sensitivity": [
+            variant(jcfg.band, "flagged x jailbreak"),
+            variant((0.01, jcfg.band[1]), "flagged x jailbreak"),
+            variant((0.0, jcfg.band[1]), "flagged x jailbreak"),
+            variant(jcfg.band, "flagged"),
+            variant(jcfg.band, "jailbreak"),
+        ],
     }
 
 
@@ -183,32 +261,58 @@ def to_markdown(res: dict) -> str:
             f"| {name} | {pct(m['precision'])} | {pct(m['recall'])} | "
             f"{pct(m['f1'])} | {pct(m['fpr'])} |"
         )
+    names = list(res["configs"])
+    head = " | ".join(n[0].upper() + n[1:] for n in names)
     lines += [
         "",
         "## Recall by attack source",
         "",
-        "| Source | Attacks | Rules only | Classifier only | Rules + classifier |",
-        "|---|---:|---:|---:|---:|",
+        f"| Source | Attacks | {head} |",
+        "|---|---:|" + "---:|" * len(names),
     ]
     for src, row in res["by_source"].items():
         if row["attacks"]:
-            lines.append(
-                f"| {src} | {row['attacks']} | {pct(row['rules only'])} | "
-                f"{pct(row['classifier only'])} | {pct(row['rules + classifier'])} |"
-            )
+            cells = " | ".join(pct(row[n]) for n in names)
+            lines.append(f"| {src} | {row['attacks']} | {cells} |")
     lines += [
         "",
         "## False-positive rate by benign source",
         "",
-        "| Source | Benign prompts | Rules only | Classifier only | Rules + classifier |",
-        "|---|---:|---:|---:|---:|",
+        f"| Source | Benign prompts | {head} |",
+        "|---|---:|" + "---:|" * len(names),
     ]
     for src, row in res["by_source"].items():
         if row["benign"]:
+            cells = " | ".join(pct(row[f"fpr {n}"]) for n in names)
+            lines.append(f"| {src} | {row['benign']} | {cells} |")
+    if j := res.get("judge"):
+        lines += [
+            "",
+            "## Judge layer (optional, `make judge-model`)",
+            "",
+            f"{j['model']}. Runs only when the classifier score is in "
+            f"[{j['band'][0]}, {j['band'][1]}) and rules + classifier didn't block; blocks when "
+            f"P(unsafe or controversial) x P(Jailbreak) >= {j['threshold']}.",
+            "",
+            f"- Escalated: **{pct(j['escalated_share_all'])}** of all prompts, "
+            f"{pct(j['escalated_share_benign'])} of benign ones",
+            f"- Judge latency when it runs: p50 {j['latency_ms']['p50']:.0f} ms, "
+            f"p95 {j['latency_ms']['p95']:.0f} ms (mean added per benign request: "
+            f"{j['mean_added_ms_benign']:.1f} ms)",
+            f"- New catches on public sets: **{j['new_catches_public']}** attacks; "
+            f"new false positives: **{j['new_false_positives_public']}**",
+            "",
+            "Sensitivity (the shipped setting is the first row; it was fixed before looking at "
+            "these numbers):",
+            "",
+            "| Band | Judge rule | Recall | FPR | Holdout recall | Holdout FPR | Escalated |",
+            "|---|---|---:|---:|---:|---:|---:|",
+        ]
+        for v in j["sensitivity"]:
             lines.append(
-                f"| {src} | {row['benign']} | {pct(row['fpr rules only'])} | "
-                f"{pct(row['fpr classifier only'])} | "
-                f"{pct(row['fpr rules + classifier'])} |"
+                f"| [{v['band'][0]}, {v['band'][1]}) | {v['rule']} | {pct(v['recall'])} | "
+                f"{pct(v['fpr'])} | {pct(v['holdout_recall'])} | {pct(v['holdout_fpr'])} | "
+                f"{pct(v['escalated_share'])} |"
             )
     g = res["generalization"]
     lines += [
@@ -276,10 +380,19 @@ def main() -> None:
     examples = load_all()
     print(f"Scoring {len(examples)} prompts with all guards...")
     records = score_all(examples, policy)
+    jcfg = policy.guards.judge
+    print("Judge scores (cached; new prompts take ~1 s each)...")
+    judged = judge_scores([r["text"] for r in records])
+    if judged is None:
+        print("  judge not exported (`make judge-model`); skipping judge configs")
+        jcfg = None
+    else:
+        for r in records:
+            r["judge"] = judged[key(r["text"])]
 
     public = [r for r in records if r["source"] != "holdout"]
     holdout = [r for r in records if r["source"] == "holdout"]
-    preds = predictors(threshold)
+    preds = predictors(threshold, jcfg)
     combined = preds["rules + classifier"]
 
     configs = {name: confusion(public, p) for name, p in preds.items()}
@@ -342,6 +455,8 @@ def main() -> None:
             "missed_attacks": examples_of(records, combined, 1, False),
             "false_positives": examples_of(records, combined, 0, True),
         },
+        "judge": judge_report(public, holdout, records, threshold, jcfg) if jcfg else None,
+        "holdout_configs": {name: confusion(holdout, p) for name, p in preds.items()},
     }
 
     RESULTS.mkdir(parents=True, exist_ok=True)

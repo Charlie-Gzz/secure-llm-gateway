@@ -19,6 +19,9 @@ services:
       CLASSIFIER_THREADS: ${CLASSIFIER_THREADS:-0}
     volumes:
       - gateway-data:/data
+      # Optional judge (3 GB, not baked into the image): `make judge-model` fills this folder.
+      # If it's empty, the gateway runs without the judge.
+      - ./models/judge:/app/models/judge:ro
     depends_on: [otel-collector]
     restart: unless-stopped
 
